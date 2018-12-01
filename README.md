@@ -1,6 +1,6 @@
 # PySide NodeTool
 
-![SiShelf](/images/01.png)
+![NodeTool](/images/01.gif)
 
 Pysideでのノードエディタのひな型。
 
