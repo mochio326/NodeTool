@@ -31,6 +31,7 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         self.pen.setColor(QtGui.QColor(255, 20, 20, 255))
         self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
+        self.hover_socket = None
 
     def mousePressEvent(self, event):
         self.point_b = event.pos()
@@ -38,14 +39,35 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
     def mouseMoveEvent(self, event):
         self.point_b = event.pos()
 
+        # ソケットのハイライト
+        pos = event.scenePos().toPoint()
+        item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
+        if isinstance(item, NodeSocket):
+            self.hover_socket = item
+            self.hover_socket.hoverEnterEvent(None)
+            self.hover_socket.update()
+        else:
+            if self.hover_socket is not None:
+                self.hover_socket.hoverLeaveEvent(None)
+                self.hover_socket.update()
+                self.hover_socket = None
+
     def mouseReleaseEvent(self, event):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
         if item.type == 'in':
-            self.target = item
+            # 古いポート側から削除
+            self.target.in_lines.remove(self)
             # 新しいポート側に追加
-            # 古いポート側から削除するひつようがある
-        self.point_b = self.target.getCenter()
+            self.target = item
+            self.target.in_lines.append(self)
+
+            self.point_b = self.target.getCenter()
+        else:
+            # ソケット以外で離したらラインごと削除
+            self.target.in_lines.remove(self)
+            self.source.out_lines.remove(self)
+            self.scene().removeItem(self)
 
     def updatePath(self):
         path = QtGui.QPainterPath()
@@ -207,6 +229,13 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         if self.type == 'out' and item.type == 'in':
             self.new_line.source = self
             self.new_line.target = item
+            # 既に接続済みのラインがあったら削除
+            if len(item.parentItem().Input.in_lines) > 0:
+                line = item.parentItem().Input.in_lines[0]
+                line.target.in_lines.remove(line)
+                line.source.out_lines.remove(line)
+                self.scene().removeItem(line)
+
             item.parentItem().Input.in_lines.append(self.new_line)
             self.out_lines.append(self.new_line)
             self.new_line.point_b = item.getCenter()
