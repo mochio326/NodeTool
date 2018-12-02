@@ -57,11 +57,11 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
         if item.type == 'in':
             # 古いポート側から削除
-            self.target.in_lines.remove(self)
+            self.target.remove_old_in_line()
             # 新しいポート側に追加
             self.target = item
+            self.target.delete_old_in_line()
             self.target.in_lines.append(self)
-
             self.point_b = self.target.getCenter()
         else:
             # ソケット以外で離したらラインごと削除
@@ -234,6 +234,7 @@ class NodeSocket(QtWidgets.QGraphicsItem):
                 line = item.parentItem().Input.in_lines[0]
                 line.target.in_lines.remove(line)
                 line.source.out_lines.remove(line)
+                item.parentItem().Input.in_lines = []
                 self.scene().removeItem(line)
 
             item.parentItem().Input.in_lines.append(self.new_line)
@@ -249,6 +250,22 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.scene().removeItem(self.new_line)
             self.new_line = None
             super(NodeSocket, self).mouseReleaseEvent(event)
+
+    def remove_old_in_line(self):
+        # 既に接続済みのラインがあったら接続を解除。ラインは消さない
+        if len(self.parentItem().Input.in_lines) > 0:
+            line = self.parentItem().Input.in_lines[0]
+            line.target.in_lines.remove(line)
+            self.parentItem().Input.in_lines = []
+
+    def delete_old_in_line(self):
+        # 既に接続済みのラインがあったら存在ごと削除
+        if len(self.parentItem().Input.in_lines) > 0:
+            line = self.parentItem().Input.in_lines[0]
+            line.target.in_lines.remove(line)
+            line.source.out_lines.remove(line)
+            self.parentItem().Input.in_lines = []
+            self.scene().removeItem(line)
 
     def getCenter(self):
         rect = self.boundingRect()
