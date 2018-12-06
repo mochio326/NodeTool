@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
+import math
+import cmath
 
 '''
 ============================================================
@@ -15,6 +17,60 @@ from shiboken2 import wrapInstance
 ============================================================
 '''
 
+class NodeLineArrow(QtWidgets.QGraphicsItem):
+    def __init__(self, parent):
+        super(NodeLineArrow, self).__init__(parent)
+        self.triangle = QtGui.QPolygon()
+
+        # Pen.
+        self.pen = QtGui.QPen()
+        self.pen.setStyle(QtCore.Qt.SolidLine)
+        self.pen.setWidth(0)
+        self.pen.setColor(QtCore.Qt.red)
+
+    def paint(self, painter, option, widget):
+        painter.setPen(self.pen)
+        path = QtGui.QPainterPath()
+        dx = self.parentItem().point_b.x() - self.parentItem().point_a.x()
+        dy = self.parentItem().point_b.y() - self.parentItem().point_a.y()
+        triangle_x = (self.parentItem().point_a.x() + self.parentItem().point_b.x()) / 2
+        triangle_y = (self.parentItem().point_a.y() + self.parentItem().point_b.y()) / 2
+        # パスの接線をパスの描画とは切り離して調整しないとうまいこと回転できなかった
+        if dx > 0:
+            ctrl1_dummy = QtCore.QPointF(self.parentItem().point_a.x() + dx * 0.3, self.parentItem().point_a.y() + dy * 0.1)
+            ctrl2_dummy = QtCore.QPointF(self.parentItem().point_b.x() - dx * 0.3, self.parentItem().point_a.y() + dy * 0.9)
+        else:
+            ctrl1_dummy = QtCore.QPointF(self.parentItem().point_a.x() + abs(dx * 0.7), self.parentItem().point_a.y() + dy * 0.1)
+            ctrl2_dummy = QtCore.QPointF(self.parentItem().point_b.x() - abs(dx * 0.7), self.parentItem().point_a.y() + dy * 0.9)
+
+        # 三角形の中心からの先端へのベクトル
+        line_vector_x = ctrl1_dummy.x() - ctrl2_dummy.x()
+        line_vector_y = ctrl1_dummy.y() - ctrl2_dummy.y()
+        line_vector = complex(line_vector_x, line_vector_y)
+        # 単位ベクトルに変換
+        _p = cmath.phase(line_vector)
+        line_vector = cmath.rect(1, _p)
+
+        #
+        triangle_points = [complex(-5, 0),
+                           complex(5, 7),
+                           complex(5, -7),
+                           complex(-5, 0)]
+        triangle_points = [_p * line_vector for _p in triangle_points]
+        triangle_points = [QtCore.QPoint(triangle_x + _p.real, triangle_y + _p.imag) for _p in triangle_points]
+        self.triangle = QtGui.QPolygon(triangle_points)
+        path.addPolygon(self.triangle)
+        painter.fillPath(path, QtCore.Qt.red)
+        painter.drawPath(path)
+
+    def boundingRect(self):
+        return self.triangle.boundingRect()
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addEllipse(self.boundingRect())
+        return path
+
 
 class NodeLine(QtWidgets.QGraphicsPathItem):
     def __init__(self, point_a, point_b):
@@ -27,11 +83,12 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         self.setBrush(QtCore.Qt.NoBrush)
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
-        self.pen.setWidth(2)
+        self.pen.setWidth(1)
         self.pen.setColor(QtGui.QColor(255, 20, 20, 255))
         self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
         self.hover_socket = None
+        self.arrow = NodeLineArrow(self)
 
     def mousePressEvent(self, event):
         self.point_b = event.pos()
@@ -62,12 +119,10 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
             self.target = item
             self.target.delete_old_in_line()
             self.target.in_lines.append(self)
-            self.point_b = self.target.getCenter()
+            self.point_b = self.target.get_center()
         else:
             # ソケット以外で離したらラインごと削除
-            self.target.in_lines.remove(self)
-            self.source.out_lines.remove(self)
-            self.scene().removeItem(self)
+            self.target.delete_old_in_line()
 
     def updatePath(self):
         path = QtGui.QPainterPath()
@@ -94,6 +149,8 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)
         painter.drawPath(self.path())
+        self.arrow.paint(painter, option, widget)
+
 
     @property
     def point_a(self):
@@ -130,27 +187,54 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         self._target = widget
 
 
+class NodeLabel(QtWidgets.QGraphicsItem):
+    def __init__(self, rect, parent):
+        super(NodeLabel, self).__init__(parent)
+        self.rect = rect
+
+        # Pen.
+        self.pen = QtGui.QPen()
+        self.pen.setStyle(QtCore.Qt.SolidLine)
+        self.pen.setWidth(2)
+        self.pen.setColor(QtGui.QColor(200, 200, 200, 255))
+
+    def paint(self, painter, option, widget):
+        painter.setPen(self.pen)
+        # painter.drawEllipse(self.rect)
+        painter.setFont(QtGui.QFont('Decorative', 10))
+        painter.drawText(self.boundingRect(), QtCore.Qt.AlignLeft, 'node')
+
+    def boundingRect(self):
+        return QtCore.QRectF(self.rect)
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addEllipse(self.boundingRect())
+        return path
+
+
 class NodeSocket(QtWidgets.QGraphicsItem):
-    def __init__(self, rect, parent, socketType):
+    def __init__(self, rect, parent, socket_type):
         super(NodeSocket, self).__init__(parent)
         self.setAcceptHoverEvents(True)
 
         self.hover_socket = None
         self.rect = rect
-        self.type = socketType
+        self.type = socket_type
 
         # Brush.
         self.brush = QtGui.QBrush()
         self.brush.setStyle(QtCore.Qt.SolidPattern)
-        self.brush.setColor(QtGui.QColor(180, 20, 90, 255))
+        self.brush.setColor(QtCore.Qt.red)
 
         # Pen.
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
-        self.pen.setWidth(1)
-        self.pen.setColor(QtGui.QColor(20, 20, 20, 255))
+        self.pen.setWidth(3)
+        self.pen.setColor(QtCore.Qt.red)
 
         # Lines.
+        self.new_lines = None
         self.out_lines = []
         self.in_lines = []
 
@@ -163,6 +247,16 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         return QtCore.QRectF(self.rect)
 
     def paint(self, painter, option, widget):
+        line_count = 0
+        if self.type == 'out':
+            line_count = len(self.out_lines)
+        elif self.type == 'in':
+            line_count = len(self.in_lines)
+
+        if line_count == 0:
+            self.brush.setColor(QtGui.QColor(60, 60, 60, 255))
+        else:
+            self.brush.setColor(QtCore.Qt.red)
         painter.setBrush(self.brush)
         painter.setPen(self.pen)
         painter.drawEllipse(self.rect)
@@ -230,22 +324,22 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.new_line.source = self
             self.new_line.target = item
             # 既に接続済みのラインがあったら削除
-            if len(item.parentItem().Input.in_lines) > 0:
-                line = item.parentItem().Input.in_lines[0]
+            if len(item.parentItem().input_socket.in_lines) > 0:
+                line = item.parentItem().input_socket.in_lines[0]
                 line.target.in_lines.remove(line)
                 line.source.out_lines.remove(line)
-                item.parentItem().Input.in_lines = []
+                item.parentItem().input_socket.in_lines = []
                 self.scene().removeItem(line)
 
-            item.parentItem().Input.in_lines.append(self.new_line)
+            item.parentItem().input_socket.in_lines.append(self.new_line)
             self.out_lines.append(self.new_line)
-            self.new_line.point_b = item.getCenter()
+            self.new_line.point_b = item.get_center()
         elif self.type == 'in' and item.type == 'out':
             self.new_line.source = item
             self.new_line.target = self
-            item.parentItem().Output.out_lines.append(self.new_line)
+            item.parentItem().output_socket.out_lines.append(self.new_line)
             self.in_lines.append(self.new_line)
-            self.new_line.point_a = item.getCenter()
+            self.new_line.point_a = item.get_center()
         else:
             self.scene().removeItem(self.new_line)
             self.new_line = None
@@ -253,21 +347,23 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 
     def remove_old_in_line(self):
         # 既に接続済みのラインがあったら接続を解除。ラインは消さない
-        if len(self.parentItem().Input.in_lines) > 0:
-            line = self.parentItem().Input.in_lines[0]
+        if len(self.parentItem().input_socket.in_lines) > 0:
+            line = self.parentItem().input_socket.in_lines[0]
             line.target.in_lines.remove(line)
-            self.parentItem().Input.in_lines = []
+            self.parentItem().input_socket.in_lines = []
+            self.update()
 
     def delete_old_in_line(self):
         # 既に接続済みのラインがあったら存在ごと削除
-        if len(self.parentItem().Input.in_lines) > 0:
-            line = self.parentItem().Input.in_lines[0]
+        if len(self.parentItem().input_socket.in_lines) > 0:
+            line = self.parentItem().input_socket.in_lines[0]
             line.target.in_lines.remove(line)
             line.source.out_lines.remove(line)
-            self.parentItem().Input.in_lines = []
+            self.parentItem().input_socket.in_lines = []
             self.scene().removeItem(line)
+            self.update()
 
-    def getCenter(self):
+    def get_center(self):
         rect = self.boundingRect()
         center = QtCore.QPointF(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2)
         center = self.mapToScene(center)
@@ -277,8 +373,11 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 class NodeItem(QtWidgets.QGraphicsItem):
     def __init__(self):
         super(NodeItem, self).__init__()
+        self.width = 100
+        self.height = 60
+
         self.name = None
-        self.rect = QtCore.QRect(0, 0, 100, 60)
+        self.rect = QtCore.QRect(0, 0, self.width, self.height)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
         self.initUi()
@@ -286,22 +385,26 @@ class NodeItem(QtWidgets.QGraphicsItem):
         # Brush.
         self.brush = QtGui.QBrush()
         self.brush.setStyle(QtCore.Qt.SolidPattern)
-        self.brush.setColor(QtGui.QColor(30, 30, 30, 255))
+        self.brush.setColor(QtGui.QColor(60, 60, 60, 255))
 
         # Pen.
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(1)
-        self.pen.setColor(QtGui.QColor(20, 20, 20, 255))
+        self.pen.setColor(QtGui.QColor(140, 140, 140, 255))
 
-        self.selPen = QtGui.QPen()
-        self.selPen.setStyle(QtCore.Qt.SolidLine)
-        self.selPen.setWidth(1)
-        self.selPen.setColor(QtGui.QColor(0, 255, 255, 255))
+        self.sel_pen = QtGui.QPen()
+        self.sel_pen.setStyle(QtCore.Qt.SolidLine)
+        self.sel_pen.setWidth(1)
+        self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
+
+        NodeLabel(QtCore.QRect(0, -20, 150, 20), self)
 
     def initUi(self):
-        self.Input = NodeSocket(QtCore.QRect(5, 25, 12, 12), self, 'in')
-        self.Output = NodeSocket(QtCore.QRect(83, 25, 12, 12), self, 'out')
+        socket_size = 12
+        socket_height = 15
+        self.input_socket = NodeSocket(QtCore.QRect(0 - socket_size / 2, 25, 12, 12), self, 'in')
+        self.output_socket = NodeSocket(QtCore.QRect(self.width - socket_size / 2, 25, 12, 12), self, 'out')
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -314,19 +417,19 @@ class NodeItem(QtWidgets.QGraphicsItem):
     def paint(self, painter, option, widget):
         painter.setBrush(self.brush)
         if self.isSelected():
-            painter.setPen(self.selPen)
+            painter.setPen(self.sel_pen)
         else:
             painter.setPen(self.pen)
         painter.drawRoundedRect(self.rect, 10.0, 10.0)
 
     def mouseMoveEvent(self, event):
         super(NodeItem, self).mouseMoveEvent(event)
-        for line in self.Output.out_lines:
-            line.point_a = line.source.getCenter()
-            line.point_b = line.target.getCenter()
-        for line in self.Input.in_lines:
-            line.point_a = line.source.getCenter()
-            line.point_b = line.target.getCenter()
+        for line in self.output_socket.out_lines:
+            line.point_a = line.source.get_center()
+            line.point_b = line.target.get_center()
+        for line in self.input_socket.in_lines:
+            line.point_a = line.source.get_center()
+            line.point_b = line.target.get_center()
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()
@@ -336,13 +439,13 @@ class NodeItem(QtWidgets.QGraphicsItem):
         selectedAction = menu.exec_(event.screenPos())
 
         if selectedAction == debugConnections:
-            print 'Input'
-            for idx, line in enumerate(self.Input.in_lines):
+            print 'input_socket'
+            for idx, line in enumerate(self.input_socket.in_lines):
                 print '  Line {0}'.format(idx)
                 print '    point_a: {0}'.format(line.point_a)
                 print '    point_b: {0}'.format(line.point_b)
-            print 'Output'
-            for idx, line in enumerate(self.Output.out_lines):
+            print 'output_socket'
+            for idx, line in enumerate(self.output_socket.out_lines):
                 print '  Line {0}'.format(idx)
                 print '    point_a: {0}'.format(line.point_a)
                 print '    point_b: {0}'.format(line.point_b)
@@ -372,12 +475,12 @@ class NodeView(QtWidgets.QGraphicsView):
         pen = QtGui.QPen()
         pen.setStyle(QtCore.Qt.SolidLine)
         pen.setWidth(1)
-        pen.setColor(QtGui.QColor(125, 125, 125, 125))
+        pen.setColor(QtGui.QColor(80, 80, 80, 125))
 
-        selPen = QtGui.QPen()
-        selPen.setStyle(QtCore.Qt.SolidLine)
-        selPen.setWidth(1)
-        selPen.setColor(QtGui.QColor(50, 50, 50, 125))
+        sel_pen = QtGui.QPen()
+        sel_pen.setStyle(QtCore.Qt.SolidLine)
+        sel_pen.setWidth(1)
+        sel_pen.setColor(QtGui.QColor(125, 125, 125, 125))
 
         grid_width = 20
         grid_height = 20
@@ -387,7 +490,7 @@ class NodeView(QtWidgets.QGraphicsView):
         for x in range(0, grid_horizontal_count):
             xc = x * grid_width
             if x % 5 == 0:
-                painter.setPen(selPen)
+                painter.setPen(sel_pen)
             else:
                 painter.setPen(pen)
             painter.drawLine(xc, 0, xc, scene_height)
@@ -395,7 +498,7 @@ class NodeView(QtWidgets.QGraphicsView):
         for y in range(0, grid_vertical_count):
             yc = y * grid_height
             if y % 5 == 0:
-                painter.setPen(selPen)
+                painter.setPen(sel_pen)
             else:
                 painter.setPen(pen)
             painter.drawLine(0, yc, scene_width, yc)
@@ -517,11 +620,11 @@ class NodeWindow(QtWidgets.QMainWindow):
     def initColor(self):
         windowCss = '''
         QFrame {
-            background-color: rgb(90,90,90);
+            background-color: rgb(40,40,40);
             border: 1px solid rgb(90,70,30);
         }
         QFrame#SideBar {
-            background-color: rgb(50,50,50);
+            background-color: rgb(40,40,40);
             border: 1px solid rgb(255,255,255);
         }'''
         self.setStyleSheet(windowCss)
