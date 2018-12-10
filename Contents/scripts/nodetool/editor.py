@@ -221,6 +221,43 @@ class NodeLabel(QtWidgets.QGraphicsItem):
         return path
 
 
+class SocketLabel(QtWidgets.QGraphicsItem):
+    def __init__(self, parent, label):
+        super(SocketLabel, self).__init__(parent)
+        self.label = label
+        self.text_size = 10
+
+        node_item = parent.parentItem()
+        socket_item = parent
+        label_width = node_item.width - socket_item.socket_size - 4
+        if parent.type == 'in':
+            self.text_align = QtCore.Qt.AlignLeft
+            label_x = socket_item.socket_size + 2
+        else:
+            self.text_align = QtCore.Qt.AlignRight
+            label_x = 0
+        self.rect = QtCore.QRect(label_x, socket_item.postion_y - self.text_size / 2, label_width, 20)
+
+        # Pen.
+        self.pen = QtGui.QPen()
+        self.pen.setStyle(QtCore.Qt.SolidLine)
+        self.pen.setWidth(2)
+        self.pen.setColor(QtGui.QColor(200, 200, 200, 255))
+
+    def paint(self, painter, option, widget):
+        painter.setPen(self.pen)
+        painter.setFont(QtGui.QFont('Decorative', self.text_size))
+        painter.drawText(self.boundingRect(), self.text_align, self.label)
+
+    def boundingRect(self):
+        return QtCore.QRectF(self.rect)
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addEllipse(self.boundingRect())
+        return path
+
+
 class NodeSocket(QtWidgets.QGraphicsItem):
     def __init__(self, parent, socket_type, color):
         super(NodeSocket, self).__init__(parent)
@@ -229,12 +266,15 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         self.socket_size = 12
         self.hover_socket = None
         self.type = socket_type
+        self.postion_y = 25
 
         if self.type == 'in':
             rect_x = 0 - self.socket_size / 2
         else:
             rect_x = parent.width - self.socket_size / 2
-        self.rect = QtCore.QRect(rect_x, 25, 12, 12)
+        self.rect = QtCore.QRect(rect_x, self.postion_y, 12, 12)
+
+        SocketLabel(self, self.type)
 
         # Brush.
         self.brush = QtGui.QBrush()
@@ -337,18 +377,14 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         if self.type == 'out' and item.type == 'in':
             self.new_line.source = self
             self.new_line.target = item
-            # 既に接続済みのラインがあったら削除
-            if len(item.parentItem().input_socket.in_lines) > 0:
-                line = item.parentItem().input_socket.in_lines[0]
-                line.target.in_lines.remove(line)
-                line.source.out_lines.remove(line)
-                item.parentItem().input_socket.in_lines = []
-                self.scene().removeItem(line)
-
+            # 接続先に既に接続済みのラインがあったら削除
+            item.delete_old_in_line()
             item.parentItem().input_socket.in_lines.append(self.new_line)
             self.out_lines.append(self.new_line)
             self.new_line.point_b = item.get_center()
         elif self.type == 'in' and item.type == 'out':
+            # 自身のポートに既に接続済みのラインがあったら削除
+            self.delete_old_in_line()
             self.new_line.source = item
             self.new_line.target = self
             item.parentItem().output_socket.out_lines.append(self.new_line)
@@ -413,6 +449,12 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
 
         NodeLabel(QtCore.QRect(0, -20, 150, 20), self)
+
+        '''
+        shad = QtWidgets.QGraphicsDropShadowEffect()
+        shad.setBlurRadius(15)
+        self.setGraphicsEffect(shad)
+        '''
 
     def initUi(self):
         socket_height = 15
