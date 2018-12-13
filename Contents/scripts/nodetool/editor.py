@@ -196,29 +196,42 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
 
 
 class NodeLabel(QtWidgets.QGraphicsItem):
-    def __init__(self, rect, parent):
+    def __init__(self, parent, label):
         super(NodeLabel, self).__init__(parent)
-        self.rect = rect
-
+        self.rect = QtCore.QRect(0, 0, self.parentItem().width, 20)
+        self.label = label
         # Pen.
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
-        self.pen.setWidth(2)
+        self.pen.setWidth(1)
         self.pen.setColor(QtGui.QColor(200, 200, 200, 255))
 
+        self.brush = QtGui.QLinearGradient(0, 0, self.parentItem().width, 0)
+        self.brush.setColorAt(0.0, QtGui.QColor(68, 160, 122))
+        self.brush.setColorAt(1.0, QtGui.QColor(60, 60, 60, 255))
+
     def paint(self, painter, option, widget):
+        painter.setBrush(self.brush)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.drawPath(self.shape())
+
         painter.setPen(self.pen)
-        # painter.drawEllipse(self.rect)
         painter.setFont(QtGui.QFont('Decorative', 10))
-        painter.drawText(self.boundingRect(), QtCore.Qt.AlignLeft, 'node')
+        rect = self.boundingRect()
+        rect.moveTop(rect.y() - 2)
+        painter.drawText(rect, QtCore.Qt.AlignCenter, self.label)
 
     def boundingRect(self):
-        return QtCore.QRectF(self.rect)
+        rect = QtCore.QRect(0, 0, self.parentItem().width, 20)
+        return QtCore.QRectF(rect)
 
     def shape(self):
         path = QtGui.QPainterPath()
-        path.addEllipse(self.boundingRect())
-        return path
+        path.addRoundedRect(QtCore.QRectF(1, 1, self.parentItem().width-2, 19), 9, 9)
+        path2 = QtGui.QPainterPath()
+        path2.addPolygon(QtCore.QRectF(1, 10, self.parentItem().width-2, 10))
+        path3 = path.united(path2)
+        return path3
 
 
 class SocketLabel(QtWidgets.QGraphicsItem):
@@ -227,17 +240,6 @@ class SocketLabel(QtWidgets.QGraphicsItem):
         self.label = label
         self.text_size = 10
 
-        node_item = parent.parentItem()
-        socket_item = parent
-        label_width = node_item.width - socket_item.socket_size - 4
-        if parent.type == 'in':
-            self.text_align = QtCore.Qt.AlignLeft
-            label_x = socket_item.socket_size + 2
-        else:
-            self.text_align = QtCore.Qt.AlignRight
-            label_x = 0
-        self.rect = QtCore.QRect(label_x, socket_item.postion_y - self.text_size / 2, label_width, 20)
-
         # Pen.
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
@@ -246,27 +248,53 @@ class SocketLabel(QtWidgets.QGraphicsItem):
 
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)
-        painter.setFont(QtGui.QFont('Decorative', self.text_size))
+
+        painter.setFont(self.font)
         painter.drawText(self.boundingRect(), self.text_align, self.label)
 
+    @property
+    def font(self):
+        return QtGui.QFont('Decorative', self.text_size)
+
     def boundingRect(self):
-        return QtCore.QRectF(self.rect)
+        node_item = self.parentItem().parentItem()
+        socket_item = self.parentItem()
+
+        font_metrics = QtGui.QFontMetrics(self.font)
+        width = font_metrics.width(self.label)
+        height = font_metrics.height()
+        # ベースラインから下降サイズを無視する
+        # こういう場合、height()ではなく、ascent()を使ってもOK!
+        height = height - font_metrics.descent()
+
+        if self.parentItem().type == 'in':
+            self.text_align = QtCore.Qt.AlignLeft
+            label_x = socket_item.socket_size + 2
+        else:
+            self.text_align = QtCore.Qt.AlignRight
+            label_x = node_item.width - width - socket_item.socket_size
+
+        return QtCore.QRect(label_x, socket_item.postion_y - self.text_size / 2, width, height)
 
     def shape(self):
         path = QtGui.QPainterPath()
         path.addEllipse(self.boundingRect())
         return path
 
+    def mousePressEvent(self, event):
+        print self.label
+
 
 class NodeSocket(QtWidgets.QGraphicsItem):
-    def __init__(self, parent, socket_type, color):
+    def __init__(self, parent, socket_type, color, value_type, postion_y=30, label=None):
         super(NodeSocket, self).__init__(parent)
         self.setAcceptHoverEvents(True)
         self.color = color
+        self.value_type = value_type
         self.socket_size = 12
         self.hover_socket = None
         self.type = socket_type
-        self.postion_y = 25
+        self.postion_y = postion_y
 
         if self.type == 'in':
             rect_x = 0 - self.socket_size / 2
@@ -274,7 +302,8 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             rect_x = parent.width - self.socket_size / 2
         self.rect = QtCore.QRect(rect_x, self.postion_y, 12, 12)
 
-        SocketLabel(self, self.type)
+        if label is not None:
+            SocketLabel(self, self.type)
 
         # Brush.
         self.brush = QtGui.QBrush()
@@ -298,7 +327,7 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         return path
 
     def boundingRect(self):
-        return QtCore.QRectF(self.rect)
+        return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0, self.rect.height() + 5.0)
 
     def paint(self, painter, option, widget):
         line_count = 0
@@ -374,6 +403,13 @@ class NodeSocket(QtWidgets.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
+
+        if self.value_type != item.value_type:
+            self.scene().removeItem(self.new_line)
+            self.new_line = None
+            super(NodeSocket, self).mouseReleaseEvent(event)
+            return
+
         if self.type == 'out' and item.type == 'in':
             self.new_line.source = self
             self.new_line.target = item
@@ -421,16 +457,15 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 
 
 class NodeItem(QtWidgets.QGraphicsItem):
-    def __init__(self):
+    def __init__(self, width=140, height=60, label='node'):
         super(NodeItem, self).__init__()
-        self.width = 100
-        self.height = 60
+        self.width = width
+        self.height = height
 
         self.name = None
         self.rect = QtCore.QRect(0, 0, self.width, self.height)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
-        self.initUi()
 
         # Brush.
         self.brush = QtGui.QBrush()
@@ -448,18 +483,17 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.sel_pen.setWidth(1)
         self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
 
-        NodeLabel(QtCore.QRect(0, -20, 150, 20), self)
+        if label is not None:
+            NodeLabel(self, label)
+            self.socket_init_y = 30
+        else:
+            self.socket_init_y = 10
 
-        '''
-        shad = QtWidgets.QGraphicsDropShadowEffect()
-        shad.setBlurRadius(15)
-        self.setGraphicsEffect(shad)
-        '''
+        self.init_ui()
 
-    def initUi(self):
-        socket_height = 15
-        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red)
-        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green)
+    def init_ui(self):
+        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y, 'in')
+        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Int', self.socket_init_y, 'out')
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -506,6 +540,14 @@ class NodeItem(QtWidgets.QGraphicsItem):
                 print '  Line {0}'.format(idx)
                 print '    point_a: {0}'.format(line.point_a)
                 print '    point_b: {0}'.format(line.point_b)
+
+
+class PinItem(NodeItem):
+
+    def init_ui(self):
+        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y)
+        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Int', self.socket_init_y)
+
 
 
 class NodeView(QtWidgets.QGraphicsView):
@@ -582,7 +624,7 @@ class NodeView(QtWidgets.QGraphicsView):
         if event.button() == QtCore.Qt.MiddleButton and event.modifiers() == QtCore.Qt.AltModifier:
             self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             self.drag = True
-            self.prevPos = event.pos()
+            self.prev_pos = event.pos()
             self.setCursor(QtCore.Qt.SizeAllCursor)
         elif event.button() == QtCore.Qt.LeftButton:
             self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
@@ -590,11 +632,11 @@ class NodeView(QtWidgets.QGraphicsView):
 
     def mouseMoveEvent(self, event):
         if self.drag:
-            delta = (self.mapToScene(event.pos()) - self.mapToScene(self.prevPos)) * -1.0
+            delta = (self.mapToScene(event.pos()) - self.mapToScene(self.prev_pos)) * -1.0
             center = QtCore.QPoint(self.viewport().width() / 2 + delta.x(), self.viewport().height() / 2 + delta.y())
-            newCenter = self.mapToScene(center)
-            self.centerOn(newCenter)
-            self.prevPos = event.pos()
+            new_center = self.mapToScene(center)
+            self.centerOn(new_center)
+            self.prev_pos = event.pos()
             return
         super(NodeView, self).mouseMoveEvent(event)
 
@@ -623,23 +665,35 @@ class SideBar(QtWidgets.QFrame):
         self.setFixedWidth(150)
 
         # Central Layout.
-        self.CentralLayout = QtWidgets.QVBoxLayout(self)
+        self.central_layout = QtWidgets.QVBoxLayout(self)
 
         # Buttons.
-        self.AddBoxButton = QtWidgets.QPushButton('Add Box')
-        self.CentralLayout.addWidget(self.AddBoxButton)
+        self.add_box_button = QtWidgets.QPushButton('Add Box')
+        self.central_layout.addWidget(self.add_box_button)
+
+        # Buttons.
+        self.add_pin_button = QtWidgets.QPushButton('Add Pin')
+        self.central_layout.addWidget(self.add_pin_button)
+
 
         # Connections.
         self.initConnections()
 
     def initConnections(self):
-        self.AddBoxButton.clicked.connect(self.clickedAddBoxButton)
+        self.add_box_button.clicked.connect(self.clickedAddBoxButton)
+        self.add_pin_button.clicked.connect(self.clickedAddPinButton)
 
     def clickedAddBoxButton(self):
         window = self.window()
         box = NodeItem()
-        window.Scene.addItem(box)
-        box.setPos(window.Scene.width() / 2, window.Scene.height() / 2)
+        window.scene.addItem(box)
+        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
+
+    def clickedAddPinButton(self):
+        window = self.window()
+        box = PinItem(width=30, height=30, label=None)
+        window.scene.addItem(box)
+        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
 
 
 class NodeWindow(QtWidgets.QMainWindow):
@@ -653,29 +707,29 @@ class NodeWindow(QtWidgets.QMainWindow):
         self.setMinimumSize(400, 200)
 
         # Central Widget.
-        self.CentralWidget = QtWidgets.QFrame()
-        self.CentralWidget.setObjectName('CentralWidget')
-        self.setCentralWidget(self.CentralWidget)
+        self.central_widget = QtWidgets.QFrame()
+        self.central_widget.setObjectName('CentralWidget')
+        self.setCentralWidget(self.central_widget)
 
         # Central Layout.
-        self.CentralLayout = QtWidgets.QHBoxLayout(self.CentralWidget)
+        self.central_layout = QtWidgets.QHBoxLayout(self.central_widget)
 
         # GraphicsView.
-        self.Scene = QtWidgets.QGraphicsScene()
-        self.Scene.setObjectName('Scene')
-        self.Scene.setSceneRect(0, 0, 32000, 32000)
-        self.View = NodeView(self.Scene, self)
-        self.CentralLayout.addWidget(self.View)
+        self.scene = QtWidgets.QGraphicsScene()
+        self.scene.setObjectName('Scene')
+        self.scene.setSceneRect(0, 0, 32000, 32000)
+        self.view = NodeView(self.scene, self)
+        self.central_layout.addWidget(self.view)
 
         # Side Bar.
-        self.SideBar = SideBar(self)
-        self.CentralLayout.addWidget(self.SideBar)
+        self.side_bar = SideBar(self)
+        self.central_layout.addWidget(self.side_bar)
 
         # Color.
         self.initColor()
 
     def initColor(self):
-        windowCss = '''
+        window_css = '''
         QFrame {
             background-color: rgb(40,40,40);
             border: 1px solid rgb(90,70,30);
@@ -684,7 +738,7 @@ class NodeWindow(QtWidgets.QMainWindow):
             background-color: rgb(40,40,40);
             border: 1px solid rgb(255,255,255);
         }'''
-        self.setStyleSheet(windowCss)
+        self.setStyleSheet(window_css)
 
 
 '''
