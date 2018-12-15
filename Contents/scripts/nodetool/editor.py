@@ -121,15 +121,15 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
         if item.type == 'in':
             # 古いポート側から削除
-            self.target.remove_old_in_line()
+            self.target.remove_old_line()
             # 新しいポート側に追加
             self.target = item
-            self.target.delete_old_in_line()
-            self.target.in_lines.append(self)
+            self.target.delete_old_line()
+            self.target.lines.append(self)
             self.point_b = self.target.get_center()
         else:
             # ソケット以外で離したらラインごと削除
-            self.target.delete_old_in_line()
+            self.target.delete_old_line()
 
     def updatePath(self):
         path = QtGui.QPainterPath()
@@ -318,8 +318,7 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 
         # Lines.
         self.new_lines = None
-        self.out_lines = []
-        self.in_lines = []
+        self.lines = []
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -330,13 +329,7 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0, self.rect.height() + 5.0)
 
     def paint(self, painter, option, widget):
-        line_count = 0
-        if self.type == 'out':
-            line_count = len(self.out_lines)
-        elif self.type == 'in':
-            line_count = len(self.in_lines)
-
-        if line_count == 0:
+        if len(self.lines) == 0:
             self.brush.setColor(QtGui.QColor(60, 60, 60, 255))
         else:
             self.brush.setColor(self.color)
@@ -404,48 +397,58 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
+        # ソケット以外で離した
+        if not isinstance(item, NodeSocket):
+            self.delete_new_line(event)
+            return
+
+        # サイクル確認
+        if item.parentItem() == self.parentItem():
+            self.delete_new_line(event)
+            return
+
         if self.value_type != item.value_type:
-            self.scene().removeItem(self.new_line)
-            self.new_line = None
-            super(NodeSocket, self).mouseReleaseEvent(event)
+            self.delete_new_line(event)
             return
 
         if self.type == 'out' and item.type == 'in':
             self.new_line.source = self
             self.new_line.target = item
             # 接続先に既に接続済みのラインがあったら削除
-            item.delete_old_in_line()
-            item.parentItem().input_socket.in_lines.append(self.new_line)
-            self.out_lines.append(self.new_line)
+            item.delete_old_line()
+            item.lines.append(self.new_line)
+            self.lines.append(self.new_line)
             self.new_line.point_b = item.get_center()
         elif self.type == 'in' and item.type == 'out':
             # 自身のポートに既に接続済みのラインがあったら削除
-            self.delete_old_in_line()
+            self.delete_old_line()
             self.new_line.source = item
             self.new_line.target = self
-            item.parentItem().output_socket.out_lines.append(self.new_line)
-            self.in_lines.append(self.new_line)
+            item.lines.append(self.new_line)
+            self.lines.append(self.new_line)
             self.new_line.point_a = item.get_center()
-        else:
-            self.scene().removeItem(self.new_line)
-            self.new_line = None
-            super(NodeSocket, self).mouseReleaseEvent(event)
 
-    def remove_old_in_line(self):
+    def delete_new_line(self, event):
+        self.scene().removeItem(self.new_line)
+        self.new_line = None
+        super(NodeSocket, self).mouseReleaseEvent(event)
+        return
+
+    def remove_old_line(self):
         # 既に接続済みのラインがあったら接続を解除。ラインは消さない
-        if len(self.parentItem().input_socket.in_lines) > 0:
-            line = self.parentItem().input_socket.in_lines[0]
-            line.target.in_lines.remove(line)
-            self.parentItem().input_socket.in_lines = []
+        if len(self.lines) > 0:
+            line = self.lines[0]
+            line.target.lines.remove(line)
+            self.lines = []
             self.update()
 
-    def delete_old_in_line(self):
+    def delete_old_line(self):
         # 既に接続済みのラインがあったら存在ごと削除
-        if len(self.parentItem().input_socket.in_lines) > 0:
-            line = self.parentItem().input_socket.in_lines[0]
-            line.target.in_lines.remove(line)
-            line.source.out_lines.remove(line)
-            self.parentItem().input_socket.in_lines = []
+        if len(self.lines) > 0:
+            line = self.lines[0]
+            line.target.lines.remove(line)
+            line.source.lines.remove(line)
+            self.lines = []
             self.scene().removeItem(line)
             self.update()
 
@@ -515,10 +518,10 @@ class NodeItem(QtWidgets.QGraphicsItem):
         super(NodeItem, self).mouseMoveEvent(event)
         # 自身以外も選択されている場合にまとめて処理する
         for _n in self.scene().selectedItems():
-            for line in _n.output_socket.out_lines:
+            for line in _n.output_socket.lines:
                 line.point_a = line.source.get_center()
                 line.point_b = line.target.get_center()
-            for line in _n.input_socket.in_lines:
+            for line in _n.input_socket.lines:
                 line.point_a = line.source.get_center()
                 line.point_b = line.target.get_center()
 
@@ -531,12 +534,12 @@ class NodeItem(QtWidgets.QGraphicsItem):
 
         if selectedAction == debugConnections:
             print 'input_socket'
-            for idx, line in enumerate(self.input_socket.in_lines):
+            for idx, line in enumerate(self.input_socket.lines):
                 print '  Line {0}'.format(idx)
                 print '    point_a: {0}'.format(line.point_a)
                 print '    point_b: {0}'.format(line.point_b)
             print 'output_socket'
-            for idx, line in enumerate(self.output_socket.out_lines):
+            for idx, line in enumerate(self.output_socket.lines):
                 print '  Line {0}'.format(idx)
                 print '    point_a: {0}'.format(line.point_a)
                 print '    point_b: {0}'.format(line.point_b)
