@@ -119,6 +119,10 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
     def mouseReleaseEvent(self, event):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
+        # ソケット以外で離したらラインごと削除
+        if not isinstance(item, NodeSocket):
+            self.target.delete_old_line()
+
         if item.type == 'in':
             # 古いポート側から削除
             self.target.remove_old_line()
@@ -127,9 +131,6 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
             self.target.delete_old_line()
             self.target.lines.append(self)
             self.point_b = self.target.get_center()
-        else:
-            # ソケット以外で離したらラインごと削除
-            self.target.delete_old_line()
 
     def updatePath(self):
         path = QtGui.QPainterPath()
@@ -227,9 +228,9 @@ class NodeLabel(QtWidgets.QGraphicsItem):
 
     def shape(self):
         path = QtGui.QPainterPath()
-        path.addRoundedRect(QtCore.QRectF(1, 1, self.parentItem().width-2, 19), 9, 9)
+        path.addRoundedRect(QtCore.QRectF(1, 1, self.parentItem().width - 2, 19), 9, 9)
         path2 = QtGui.QPainterPath()
-        path2.addPolygon(QtCore.QRectF(1, 10, self.parentItem().width-2, 10))
+        path2.addPolygon(QtCore.QRectF(1, 10, self.parentItem().width - 2, 10))
         path3 = path.united(path2)
         return path3
 
@@ -274,7 +275,7 @@ class SocketLabel(QtWidgets.QGraphicsItem):
             self.text_align = QtCore.Qt.AlignRight
             label_x = node_item.width - width - socket_item.socket_size
 
-        return QtCore.QRect(label_x, socket_item.postion_y - self.text_size / 2, width, height)
+        return QtCore.QRect(label_x, socket_item.position_y - self.text_size / 2, width, height)
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -286,7 +287,7 @@ class SocketLabel(QtWidgets.QGraphicsItem):
 
 
 class NodeSocket(QtWidgets.QGraphicsItem):
-    def __init__(self, parent, socket_type, color, value_type, postion_y=30, label=None):
+    def __init__(self, parent, socket_type, color, value_type, position_y=30, label=None):
         super(NodeSocket, self).__init__(parent)
         self.setAcceptHoverEvents(True)
         self.color = color
@@ -294,13 +295,14 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         self.socket_size = 12
         self.hover_socket = None
         self.type = socket_type
-        self.postion_y = postion_y
+        self.position_y = position_y
+        self.new_line = None
 
         if self.type == 'in':
             rect_x = 0 - self.socket_size / 2
         else:
             rect_x = parent.width - self.socket_size / 2
-        self.rect = QtCore.QRect(rect_x, self.postion_y, 12, 12)
+        self.rect = QtCore.QRect(rect_x, self.position_y, 12, 12)
 
         if label is not None:
             SocketLabel(self, self.type)
@@ -326,7 +328,8 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         return path
 
     def boundingRect(self):
-        return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0, self.rect.height() + 5.0)
+        return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0,
+                             self.rect.height() + 5.0)
 
     def paint(self, painter, option, widget):
         if len(self.lines) == 0:
@@ -402,10 +405,24 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.delete_new_line(event)
             return
 
+        # 同じ側のピンの場合
+        if self.type == item.type:
+            self.delete_new_line(event)
+            return
+
         # サイクル確認
+        # memo:ラインをたどって全体的にサイクルしてないかを調べる
         if item.parentItem() == self.parentItem():
             self.delete_new_line(event)
             return
+
+        # 相手がPINの場合
+        if isinstance(item.parentItem(), PinItem):
+            item.parentItem().propagate(self, item, self.new_line)
+
+        # 自分がPINの場合
+        if isinstance(self.parentItem(), PinItem):
+            self.parentItem().propagate(item, self, self.new_line)
 
         if self.value_type != item.value_type:
             self.delete_new_line(event)
@@ -438,19 +455,31 @@ class NodeSocket(QtWidgets.QGraphicsItem):
         # 既に接続済みのラインがあったら接続を解除。ラインは消さない
         if len(self.lines) > 0:
             line = self.lines[0]
-            line.target.lines.remove(line)
+            _target = line.target
+            _target.lines.remove(line)
             self.lines = []
             self.update()
+
+            if isinstance(_target.parentItem(), PinItem):
+                _target.parentItem().return_initial_state()
 
     def delete_old_line(self):
         # 既に接続済みのラインがあったら存在ごと削除
         if len(self.lines) > 0:
             line = self.lines[0]
-            line.target.lines.remove(line)
-            line.source.lines.remove(line)
+            _target = line.target
+            _source = line.source
+            _target.lines.remove(line)
+            _source.lines.remove(line)
             self.lines = []
             self.scene().removeItem(line)
             self.update()
+
+            if isinstance(_target.parentItem(), PinItem):
+                _target.parentItem().return_initial_state()
+            if isinstance(_source.parentItem(), PinItem):
+                _source.parentItem().return_initial_state()
+
 
     def get_center(self):
         rect = self.boundingRect()
@@ -495,8 +524,8 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.init_ui()
 
     def init_ui(self):
-        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y, 'in')
-        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Int', self.socket_init_y, 'out')
+        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y, 'Int')
+        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.red, 'Int', self.socket_init_y, 'Int')
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -545,11 +574,54 @@ class NodeItem(QtWidgets.QGraphicsItem):
                 print '    point_b: {0}'.format(line.point_b)
 
 
-class PinItem(NodeItem):
+class NodeItem2(NodeItem):
 
     def init_ui(self):
-        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y)
-        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Int', self.socket_init_y)
+        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.green, 'Bool', self.socket_init_y, 'Bool')
+        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Bool', self.socket_init_y, 'Bool')
+
+
+class PinItem(NodeItem):
+
+    def __init__(self, *args, **kwargs):
+        self.init_color = QtCore.Qt.gray
+        self.init_type = None
+        super(PinItem, self).__init__(*args, **kwargs)
+
+    def init_ui(self):
+        self.input_socket = NodeSocket(self, 'in', self.init_color, self.init_type, self.socket_init_y)
+        self.output_socket = NodeSocket(self, 'out', self.init_color, self.init_type, self.socket_init_y)
+
+    def return_initial_state(self):
+        print 'return_initial_state'
+        # 接続が無くなったら初期状態の見た目に戻す
+        if len(self.input_socket.lines) == 0 and len(self.output_socket.lines) == 0:
+            self.input_socket.value_type = self.init_type
+            self.input_socket.color = self.init_color
+            self.input_socket.hoverLeaveEvent(None)
+            self.output_socket.value_type = self.init_type
+            self.output_socket.color = self.init_color
+            self.output_socket.hoverLeaveEvent(None)
+
+    def propagate(self, source, target, line):
+        # 片方のソケットに接続された際に値のタイプや色を伝搬させる
+        if target == self.input_socket:
+            pair_socket = self.output_socket
+        else:
+            pair_socket = self.input_socket
+
+        if len(pair_socket.lines) == 0:
+            # 反対側のソケットの処理
+            pair_socket.value_type = source.value_type
+            pair_socket.color = source.color
+            pair_socket.hoverLeaveEvent(None)
+            # 自分自身のソケットの処理
+            target.value_type = source.value_type
+            target.color = source.color
+            target.hoverLeaveEvent(None)
+            # ラインも色変え等
+            line.color = source.color
+            line.hoverLeaveEvent(None)
 
 
 
@@ -673,22 +745,31 @@ class SideBar(QtWidgets.QFrame):
         # Buttons.
         self.add_box_button = QtWidgets.QPushButton('Add Box')
         self.central_layout.addWidget(self.add_box_button)
+        # Buttons.
+        self.add_box_button2 = QtWidgets.QPushButton('Add Box2')
+        self.central_layout.addWidget(self.add_box_button2)
 
         # Buttons.
         self.add_pin_button = QtWidgets.QPushButton('Add Pin')
         self.central_layout.addWidget(self.add_pin_button)
-
 
         # Connections.
         self.initConnections()
 
     def initConnections(self):
         self.add_box_button.clicked.connect(self.clickedAddBoxButton)
+        self.add_box_button2.clicked.connect(self.clickedAddBoxButton2)
         self.add_pin_button.clicked.connect(self.clickedAddPinButton)
 
     def clickedAddBoxButton(self):
         window = self.window()
-        box = NodeItem()
+        box = NodeItem(label='Int Node')
+        window.scene.addItem(box)
+        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
+
+    def clickedAddBoxButton2(self):
+        window = self.window()
+        box = NodeItem2(label='Bool Node')
         window.scene.addItem(box)
         box.setPos(window.scene.width() / 2, window.scene.height() / 2)
 
