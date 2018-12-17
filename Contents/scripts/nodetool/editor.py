@@ -460,9 +460,11 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.lines = []
             self.update()
 
+            '''
             if isinstance(_target.parentItem(), PinItem):
                 _target.parentItem().return_initial_state()
-
+            '''
+            
     def delete_old_line(self):
         # 既に接続済みのラインがあったら存在ごと削除
         if len(self.lines) > 0:
@@ -475,11 +477,12 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.scene().removeItem(line)
             self.update()
 
+            '''
             if isinstance(_target.parentItem(), PinItem):
                 _target.parentItem().return_initial_state()
             if isinstance(_source.parentItem(), PinItem):
                 _source.parentItem().return_initial_state()
-
+            '''
 
     def get_center(self):
         rect = self.boundingRect()
@@ -593,7 +596,6 @@ class PinItem(NodeItem):
         self.output_socket = NodeSocket(self, 'out', self.init_color, self.init_type, self.socket_init_y)
 
     def return_initial_state(self):
-        print 'return_initial_state'
         # 接続が無くなったら初期状態の見た目に戻す
         if len(self.input_socket.lines) == 0 and len(self.output_socket.lines) == 0:
             self.input_socket.value_type = self.init_type
