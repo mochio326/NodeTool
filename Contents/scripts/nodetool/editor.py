@@ -252,7 +252,7 @@ class NodeLabel(QtWidgets.QGraphicsItem):
 class SocketLabel(QtWidgets.QGraphicsItem):
 
     @property
-    def soket(self):
+    def socket(self):
         return self.parentItem()
 
     def __init__(self, parent, label):
@@ -277,8 +277,8 @@ class SocketLabel(QtWidgets.QGraphicsItem):
         return QtGui.QFont('Decorative', self.text_size)
 
     def boundingRect(self):
-        node_item = self.soket.node
-        socket_item = self.soket
+        node_item = self.socket.node
+        socket_item = self.socket
 
         font_metrics = QtGui.QFontMetrics(self.font)
         width = font_metrics.width(self.label)
@@ -287,7 +287,7 @@ class SocketLabel(QtWidgets.QGraphicsItem):
         # こういう場合、height()ではなく、ascent()を使ってもOK!
         height = height - font_metrics.descent()
 
-        if self.soket.type == 'in':
+        if self.socket.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
             label_x = socket_item.socket_size + 2
         else:
@@ -504,6 +504,11 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 
 
 class NodeItem(QtWidgets.QGraphicsItem):
+
+    @property
+    def rect(self):
+        return QtCore.QRect(0, 0, self.width, self.height)
+
     def __init__(self, width=140, height=60, label='node'):
         super(NodeItem, self).__init__()
         self.width = width
@@ -511,7 +516,6 @@ class NodeItem(QtWidgets.QGraphicsItem):
         self.sockets = []
 
         self.name = None
-        self.rect = QtCore.QRect(0, 0, self.width, self.height)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
 
@@ -537,13 +541,12 @@ class NodeItem(QtWidgets.QGraphicsItem):
         else:
             self.socket_init_y = 10
 
-    def add_socket(self, type, color, value_type, label):
+    def add_socket(self, socket_type, color, value_type, label):
         _y = self.socket_init_y + 20 * len(self.sockets)
-        _s = NodeSocket(self, type, color, value_type, _y, label)
+        _s = NodeSocket(self, socket_type, color, value_type, _y, label)
         self.sockets.append(_s)
 
         self.height = _y + 25
-        self.rect = QtCore.QRect(0, 0, self.width, self.height)
         self.update()
 
     def shape(self):
