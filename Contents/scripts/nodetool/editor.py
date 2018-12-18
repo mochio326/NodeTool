@@ -30,24 +30,28 @@ class NodeLineArrow(QtWidgets.QGraphicsItem):
         self.pen.setWidth(0)
         self.pen.setColor(self.color)
 
+    @property
+    def line(self):
+        return self.parentItem()
+
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)
         path = QtGui.QPainterPath()
-        dx = self.parentItem().point_b.x() - self.parentItem().point_a.x()
-        dy = self.parentItem().point_b.y() - self.parentItem().point_a.y()
-        triangle_x = (self.parentItem().point_a.x() + self.parentItem().point_b.x()) / 2
-        triangle_y = (self.parentItem().point_a.y() + self.parentItem().point_b.y()) / 2
+        dx = self.line.point_b.x() - self.line.point_a.x()
+        dy = self.line.point_b.y() - self.line.point_a.y()
+        triangle_x = (self.line.point_a.x() + self.line.point_b.x()) / 2
+        triangle_y = (self.line.point_a.y() + self.line.point_b.y()) / 2
         # パスの接線をパスの描画とは切り離して調整しないとうまいこと回転できなかった
         if dx > 0:
-            ctrl1_dummy = QtCore.QPointF(self.parentItem().point_a.x() + dx * 0.3,
-                                         self.parentItem().point_a.y() + dy * 0.1)
-            ctrl2_dummy = QtCore.QPointF(self.parentItem().point_b.x() - dx * 0.3,
-                                         self.parentItem().point_a.y() + dy * 0.9)
+            ctrl1_dummy = QtCore.QPointF(self.line.point_a.x() + dx * 0.3,
+                                         self.line.point_a.y() + dy * 0.1)
+            ctrl2_dummy = QtCore.QPointF(self.line.point_b.x() - dx * 0.3,
+                                         self.line.point_a.y() + dy * 0.9)
         else:
-            ctrl1_dummy = QtCore.QPointF(self.parentItem().point_a.x() + abs(dx * 0.7),
-                                         self.parentItem().point_a.y() + dy * 0.1)
-            ctrl2_dummy = QtCore.QPointF(self.parentItem().point_b.x() - abs(dx * 0.7),
-                                         self.parentItem().point_a.y() + dy * 0.9)
+            ctrl1_dummy = QtCore.QPointF(self.line.point_a.x() + abs(dx * 0.7),
+                                         self.line.point_a.y() + dy * 0.1)
+            ctrl2_dummy = QtCore.QPointF(self.line.point_b.x() - abs(dx * 0.7),
+                                         self.line.point_a.y() + dy * 0.9)
 
         # 三角形の中心からの先端へのベクトル
         line_vector_x = ctrl1_dummy.x() - ctrl2_dummy.x()
@@ -122,6 +126,11 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
         # ソケット以外で離したらラインごと削除
         if not isinstance(item, NodeSocket):
             self.target.delete_old_line()
+            # PINの見た目の初期化
+            if isinstance(self.target.node, PinItem):
+                self.target.node.return_initial_state()
+            if isinstance(self.source.node, PinItem):
+                self.source.node.return_initial_state()
 
         if item.type == 'in':
             # 古いポート側から削除
@@ -197,9 +206,14 @@ class NodeLine(QtWidgets.QGraphicsPathItem):
 
 
 class NodeLabel(QtWidgets.QGraphicsItem):
+
+    @property
+    def node(self):
+        return self.parentItem()
+
     def __init__(self, parent, label):
         super(NodeLabel, self).__init__(parent)
-        self.rect = QtCore.QRect(0, 0, self.parentItem().width, 20)
+        self.rect = QtCore.QRect(0, 0, self.node.width, 20)
         self.label = label
         # Pen.
         self.pen = QtGui.QPen()
@@ -207,7 +221,7 @@ class NodeLabel(QtWidgets.QGraphicsItem):
         self.pen.setWidth(1)
         self.pen.setColor(QtGui.QColor(200, 200, 200, 255))
 
-        self.brush = QtGui.QLinearGradient(0, 0, self.parentItem().width, 0)
+        self.brush = QtGui.QLinearGradient(0, 0, self.node.width, 0)
         self.brush.setColorAt(0.0, QtGui.QColor(68, 160, 122))
         self.brush.setColorAt(1.0, QtGui.QColor(60, 60, 60, 255))
 
@@ -223,19 +237,24 @@ class NodeLabel(QtWidgets.QGraphicsItem):
         painter.drawText(rect, QtCore.Qt.AlignCenter, self.label)
 
     def boundingRect(self):
-        rect = QtCore.QRect(0, 0, self.parentItem().width, 20)
+        rect = QtCore.QRect(0, 0, self.node.width, 20)
         return QtCore.QRectF(rect)
 
     def shape(self):
         path = QtGui.QPainterPath()
-        path.addRoundedRect(QtCore.QRectF(1, 1, self.parentItem().width - 2, 19), 9, 9)
+        path.addRoundedRect(QtCore.QRectF(1, 1, self.node.width - 2, 19), 9, 9)
         path2 = QtGui.QPainterPath()
-        path2.addPolygon(QtCore.QRectF(1, 10, self.parentItem().width - 2, 10))
+        path2.addPolygon(QtCore.QRectF(1, 10, self.node.width - 2, 10))
         path3 = path.united(path2)
         return path3
 
 
 class SocketLabel(QtWidgets.QGraphicsItem):
+
+    @property
+    def soket(self):
+        return self.parentItem()
+
     def __init__(self, parent, label):
         super(SocketLabel, self).__init__(parent)
         self.label = label
@@ -258,8 +277,8 @@ class SocketLabel(QtWidgets.QGraphicsItem):
         return QtGui.QFont('Decorative', self.text_size)
 
     def boundingRect(self):
-        node_item = self.parentItem().parentItem()
-        socket_item = self.parentItem()
+        node_item = self.soket.node
+        socket_item = self.soket
 
         font_metrics = QtGui.QFontMetrics(self.font)
         width = font_metrics.width(self.label)
@@ -268,7 +287,7 @@ class SocketLabel(QtWidgets.QGraphicsItem):
         # こういう場合、height()ではなく、ascent()を使ってもOK!
         height = height - font_metrics.descent()
 
-        if self.parentItem().type == 'in':
+        if self.soket.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
             label_x = socket_item.socket_size + 2
         else:
@@ -287,6 +306,11 @@ class SocketLabel(QtWidgets.QGraphicsItem):
 
 
 class NodeSocket(QtWidgets.QGraphicsItem):
+
+    @property
+    def node(self):
+        return self.parentItem()
+
     def __init__(self, parent, socket_type, color, value_type, position_y=30, label=None):
         super(NodeSocket, self).__init__(parent)
         self.setAcceptHoverEvents(True)
@@ -412,17 +436,17 @@ class NodeSocket(QtWidgets.QGraphicsItem):
 
         # サイクル確認
         # memo:ラインをたどって全体的にサイクルしてないかを調べる
-        if item.parentItem() == self.parentItem():
+        if item.node == self.node:
             self.delete_new_line(event)
             return
 
         # 相手がPINの場合
-        if isinstance(item.parentItem(), PinItem):
-            item.parentItem().propagate(self, item, self.new_line)
+        if isinstance(item.node, PinItem):
+            item.node.propagate(self, item, self.new_line)
 
         # 自分がPINの場合
-        if isinstance(self.parentItem(), PinItem):
-            self.parentItem().propagate(item, self, self.new_line)
+        if isinstance(self.node, PinItem):
+            self.node.propagate(item, self, self.new_line)
 
         if self.value_type != item.value_type:
             self.delete_new_line(event)
@@ -460,11 +484,6 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.lines = []
             self.update()
 
-            '''
-            if isinstance(_target.parentItem(), PinItem):
-                _target.parentItem().return_initial_state()
-            '''
-            
     def delete_old_line(self):
         # 既に接続済みのラインがあったら存在ごと削除
         if len(self.lines) > 0:
@@ -476,13 +495,6 @@ class NodeSocket(QtWidgets.QGraphicsItem):
             self.lines = []
             self.scene().removeItem(line)
             self.update()
-
-            '''
-            if isinstance(_target.parentItem(), PinItem):
-                _target.parentItem().return_initial_state()
-            if isinstance(_source.parentItem(), PinItem):
-                _source.parentItem().return_initial_state()
-            '''
 
     def get_center(self):
         rect = self.boundingRect()
@@ -496,6 +508,7 @@ class NodeItem(QtWidgets.QGraphicsItem):
         super(NodeItem, self).__init__()
         self.width = width
         self.height = height
+        self.sockets = []
 
         self.name = None
         self.rect = QtCore.QRect(0, 0, self.width, self.height)
@@ -524,11 +537,14 @@ class NodeItem(QtWidgets.QGraphicsItem):
         else:
             self.socket_init_y = 10
 
-        self.init_ui()
+    def add_socket(self, type, color, value_type, label):
+        _y = self.socket_init_y + 20 * len(self.sockets)
+        _s = NodeSocket(self, type, color, value_type, _y, label)
+        self.sockets.append(_s)
 
-    def init_ui(self):
-        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.red, 'Int', self.socket_init_y, 'Int')
-        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.red, 'Int', self.socket_init_y, 'Int')
+        self.height = _y + 25
+        self.rect = QtCore.QRect(0, 0, self.width, self.height)
+        self.update()
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -550,12 +566,14 @@ class NodeItem(QtWidgets.QGraphicsItem):
         super(NodeItem, self).mouseMoveEvent(event)
         # 自身以外も選択されている場合にまとめて処理する
         for _n in self.scene().selectedItems():
-            for line in _n.output_socket.lines:
-                line.point_a = line.source.get_center()
-                line.point_b = line.target.get_center()
-            for line in _n.input_socket.lines:
-                line.point_a = line.source.get_center()
-                line.point_b = line.target.get_center()
+            for _s in _n.sockets:
+                for line in _s.lines:
+                    if _s.type == 'out':
+                        line.point_a = line.source.get_center()
+                        line.point_b = line.target.get_center()
+                    if _s.type == 'in':
+                        line.point_a = line.source.get_center()
+                        line.point_b = line.target.get_center()
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()
@@ -577,23 +595,16 @@ class NodeItem(QtWidgets.QGraphicsItem):
                 print '    point_b: {0}'.format(line.point_b)
 
 
-class NodeItem2(NodeItem):
-
-    def init_ui(self):
-        self.input_socket = NodeSocket(self, 'in', QtCore.Qt.green, 'Bool', self.socket_init_y, 'Bool')
-        self.output_socket = NodeSocket(self, 'out', QtCore.Qt.green, 'Bool', self.socket_init_y, 'Bool')
-
-
 class PinItem(NodeItem):
 
     def __init__(self, *args, **kwargs):
         self.init_color = QtCore.Qt.gray
         self.init_type = None
         super(PinItem, self).__init__(*args, **kwargs)
-
-    def init_ui(self):
         self.input_socket = NodeSocket(self, 'in', self.init_color, self.init_type, self.socket_init_y)
         self.output_socket = NodeSocket(self, 'out', self.init_color, self.init_type, self.socket_init_y)
+        self.sockets.append(self.input_socket)
+        self.sockets.append(self.output_socket)
 
     def return_initial_state(self):
         # 接続が無くなったら初期状態の見た目に戻す
@@ -624,7 +635,6 @@ class PinItem(NodeItem):
             # ラインも色変え等
             line.color = source.color
             line.hoverLeaveEvent(None)
-
 
 
 class NodeView(QtWidgets.QGraphicsView):
@@ -766,12 +776,18 @@ class SideBar(QtWidgets.QFrame):
     def clickedAddBoxButton(self):
         window = self.window()
         box = NodeItem(label='Int Node')
+        box.add_socket('in', QtCore.Qt.red, 'Int', 'in')
+        box.add_socket('out', QtCore.Qt.red, 'Int', 'out')
         window.scene.addItem(box)
         box.setPos(window.scene.width() / 2, window.scene.height() / 2)
 
     def clickedAddBoxButton2(self):
         window = self.window()
-        box = NodeItem2(label='Bool Node')
+        box = NodeItem(label='Bool Node')
+        box.add_socket('in', QtCore.Qt.green, 'Bool', 'in')
+        box.add_socket('out', QtCore.Qt.green, 'Bool', 'out')
+        box.add_socket('out', QtCore.Qt.red, 'Int', 'out')
+
         window.scene.addItem(box)
         box.setPos(window.scene.width() / 2, window.scene.height() / 2)
 
