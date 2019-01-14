@@ -70,12 +70,16 @@ class LineArrow(QtWidgets.QGraphicsItem):
 class Line(QtWidgets.QGraphicsPathItem):
 
     def __init__(self, point_a, point_b, color):
+        from .port import Port
+        self.port = Port
+
         super(Line, self).__init__()
         self.color = color
         self._point_a = point_a
         self._point_b = point_b
         self._source = None
         self._target = None
+        self.moving = None
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(1)
@@ -90,18 +94,23 @@ class Line(QtWidgets.QGraphicsPathItem):
 
     def mousePressEvent(self, event):
         self.point_b = event.pos()
+        self.moving = 'b'
 
     def mouseMoveEvent(self, event):
-        from .port import Port
+        pos = event.scenePos().toPoint()
+        setattr(self, 'point_{0}'.format(self.moving), pos)
 
-        self.point_b = event.pos()
+        if self.moving == 'a':
+            none_move_port = self.target
+        else:
+            none_move_port = self.source
 
         # ポートのハイライト
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
-        if isinstance(item, Port):
-            if self.source.value_type != item.value_type or self.source.type == item.type:
+        if isinstance(item, self.port):
+            if none_move_port.value_type == item.value_type and none_move_port.type != item.type:
                 self.hover_port = item
                 self.hover_port.hoverEnterEvent(None)
                 self.hover_port.update()
@@ -112,13 +121,11 @@ class Line(QtWidgets.QGraphicsPathItem):
                 self.hover_port = None
 
     def mouseReleaseEvent(self, event):
-        from .port import Port
-
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
         # ポート以外で離したらラインごと削除
-        if not isinstance(item, Port):
+        if not isinstance(item, self.port):
             self.target.delete_old_line()
 
             # PINの見た目の初期化
@@ -126,6 +133,7 @@ class Line(QtWidgets.QGraphicsPathItem):
                 self.target.node.return_initial_state()
             if self.source.node.TYPE == 'Pin':
                 self.source.node.return_initial_state()
+            return
 
         if self.source.value_type != item.value_type or self.source.type == item.type:
             self.point_b = self.target.get_center()

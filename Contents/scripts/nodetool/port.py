@@ -142,6 +142,9 @@ class Port(QtWidgets.QGraphicsItem):
             point_b = self.mapToScene(event.pos())
             self.new_line = Line(point_a, point_b, self.color)
             self.scene().addItem(self.new_line)
+            self.new_line.moving = 'b'
+            self.new_line.source = self
+
         elif self.type == 'in':
             rect = self.boundingRect()
             point_a = self.mapToScene(event.pos())
@@ -149,30 +152,14 @@ class Port(QtWidgets.QGraphicsItem):
             point_b = self.mapToScene(point_b)
             self.new_line = Line(point_a, point_b, self.color)
             self.scene().addItem(self.new_line)
+            self.new_line.moving = 'a'
+            self.new_line.target = self
+
         else:
             super(Port, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.type == 'out':
-            point_b = self.mapToScene(event.pos())
-            self.new_line.point_b = point_b
-        elif self.type == 'in':
-            point_a = self.mapToScene(event.pos())
-            self.new_line.point_a = point_a
-        else:
-            super(Port, self).mouseMoveEvent(event)
-
-        pos = event.scenePos().toPoint()
-        item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
-        if isinstance(item, Port):
-            self.hover_port = item
-            self.hover_port.hoverEnterEvent(None)
-            self.hover_port.update()
-        else:
-            if self.hover_port is not None:
-                self.hover_port.hoverLeaveEvent(None)
-                self.hover_port.update()
-                self.hover_port = None
+        self.new_line.mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         pos = event.scenePos().toPoint()
