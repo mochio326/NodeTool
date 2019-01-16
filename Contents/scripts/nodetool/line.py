@@ -96,57 +96,95 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.point_b = event.pos()
         self.moving = 'b'
 
+    def _get_none_move_port(self):
+        if self.source is None:
+            return self.target
+        return self.source
+
+    def update_moving_point(self, pos):
+        if self.source is None:
+            self.point_a = pos
+        else:
+            self.point_b = pos
+
+    def delete(self):
+        if self.source is not None:
+            self.source.disconnect(self)
+        if self.target is not None:
+            self.target.disconnect(self)
+        self.scene().removeItem(self)
+
     def mouseMoveEvent(self, event):
         pos = event.scenePos().toPoint()
-        setattr(self, 'point_{0}'.format(self.moving), pos)
-
-        if self.moving == 'a':
-            none_move_port = self.target
-        else:
-            none_move_port = self.source
+        self.update_moving_point(pos)
+        none_move_port = self._get_none_move_port()
 
         # ポートのハイライト
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
         if isinstance(item, self.port):
-            if none_move_port.value_type == item.value_type and none_move_port.type != item.type:
+            if none_move_port.can_connection(item):
                 self.hover_port = item
                 self.hover_port.hoverEnterEvent(None)
-                self.hover_port.update()
         else:
             if self.hover_port is not None:
                 self.hover_port.hoverLeaveEvent(None)
-                self.hover_port.update()
                 self.hover_port = None
 
     def mouseReleaseEvent(self, event):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
+        if self.moving == 'a':
+            start_of_line = self.target
+            end_of_line = self.source
+        else:
+            start_of_line = self.source
+            end_of_line = self.target
+
         # ポート以外で離したらラインごと削除
         if not isinstance(item, self.port):
-            self.target.delete_old_line()
-
-            # PINの見た目の初期化
-            if self.target.node.TYPE == 'Pin':
-                self.target.node.return_initial_state()
-            if self.source.node.TYPE == 'Pin':
-                self.source.node.return_initial_state()
+            self.delete()
             return
 
-        if self.source.value_type != item.value_type or self.source.type == item.type:
-            self.point_b = self.target.get_center()
+        if not start_of_line.can_connection(item):
+            if end_of_line is None:
+                # ライン新規作成時
+                start_of_line.delete_old_line()
+            else:
+                # ライン編集時は元の位置に戻す
+                pos = end_of_line.get_center()
+                setattr(self, 'point_{0}'.format(self.moving), pos)
             return
 
-        if item.type == 'in':
+        if start_of_line.type == 'out':
+            # 出力ポートから入力ポートに接続した場合
+            print u'出力ポートから入力ポートに接続した場合'
             # 古いポート側から削除
-            self.target.remove_old_line()
+            if self.target is not None:
+                self.target.remove_old_line()
             # 新しいポート側に追加
             self.target = item
             self.target.delete_old_line()
-            self.target.lines.append(self)
-            self.point_b = self.target.get_center()
+            self.point_b = item.get_center()
+
+        else:
+            # 入力ポートから出力ポートに接続した場合
+            self.target.delete_old_line()
+            self.source = item
+            self.point_a = item.get_center()
+
+        # 相手がPINの場合
+        if self.source.node.TYPE == 'Pin':
+            self.source.node.propagate(self.target, self.source, self)
+
+        # 自分がPINの場合
+        if self.target.node.TYPE == 'Pin':
+            self.target.node.propagate(self.source, self.target, self)
+
+        self.target.lines.append(self)
+        self.source.lines.append(self)
 
     def updatePath(self):
         path = QtGui.QPainterPath()

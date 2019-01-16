@@ -136,23 +136,17 @@ class Port(QtWidgets.QGraphicsItem):
         self.hover_port = None
 
         if self.type == 'out':
-            rect = self.boundingRect()
-            point_a = QtCore.QPointF(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2)
-            point_a = self.mapToScene(point_a)
+            point_a = self.get_center()
             point_b = self.mapToScene(event.pos())
             self.new_line = Line(point_a, point_b, self.color)
             self.scene().addItem(self.new_line)
-            self.new_line.moving = 'b'
             self.new_line.source = self
 
         elif self.type == 'in':
-            rect = self.boundingRect()
             point_a = self.mapToScene(event.pos())
-            point_b = QtCore.QPointF(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2)
-            point_b = self.mapToScene(point_b)
+            point_b = self.get_center()
             self.new_line = Line(point_a, point_b, self.color)
             self.scene().addItem(self.new_line)
-            self.new_line.moving = 'a'
             self.new_line.target = self
 
         else:
@@ -162,53 +156,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.new_line.mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        pos = event.scenePos().toPoint()
-        item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
-
-        # ポート以外で離した
-        if not isinstance(item, Port):
-            self.delete_new_line(event)
-            return
-
-        # 同じ側のピンの場合
-        if self.type == item.type:
-            self.delete_new_line(event)
-            return
-
-        # サイクル確認
-        # memo:ラインをたどって全体的にサイクルしてないかを調べる
-        if item.node == self.node:
-            self.delete_new_line(event)
-            return
-
-        # 相手がPINの場合
-        if item.node.TYPE == 'Pin':
-            item.node.propagate(self, item, self.new_line)
-
-        # 自分がPINの場合
-        if self.node.TYPE == 'Pin':
-            self.node.propagate(item, self, self.new_line)
-
-        if self.value_type != item.value_type:
-            self.delete_new_line(event)
-            return
-
-        if self.type == 'out' and item.type == 'in':
-            self.new_line.source = self
-            self.new_line.target = item
-            # 接続先に既に接続済みのラインがあったら削除
-            item.delete_old_line()
-            item.lines.append(self.new_line)
-            self.lines.append(self.new_line)
-            self.new_line.point_b = item.get_center()
-        elif self.type == 'in' and item.type == 'out':
-            # 自身のポートに既に接続済みのラインがあったら削除
-            self.delete_old_line()
-            self.new_line.source = item
-            self.new_line.target = self
-            item.lines.append(self.new_line)
-            self.lines.append(self.new_line)
-            self.new_line.point_a = item.get_center()
+        self.new_line.mouseReleaseEvent(event)
 
     def delete_new_line(self, event):
         self.scene().removeItem(self.new_line)
@@ -237,11 +185,40 @@ class Port(QtWidgets.QGraphicsItem):
             self.scene().removeItem(line)
             self.update()
 
+    def disconnect(self, line):
+        if line in self.lines:
+            self.lines.remove(line)
+        if self.node.TYPE == 'Pin':
+            self.node.return_initial_state()
+
+
+    def connect(self, line):
+        if self.type == 'in':
+            if len(self.lines) > 0:
+                line = self.lines[0]
+                line.delete()
+                self.lines = []
+        self.lines.append(line)
+
     def get_center(self):
         rect = self.boundingRect()
         center = QtCore.QPointF(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2)
         center = self.mapToScene(center)
         return center
+
+    def can_connection(self, port):
+        if self.value_type != port.value_type:
+            # Noneな場合はPinなので例外
+            if self.value_type is not None and port.value_type is not None:
+                return False
+        if self.type == port.type:
+            return False
+        # サイクル確認
+        # memo:ラインをたどって全体的にサイクルしてないかを調べる予定
+        if self.node == port.node:
+            return False
+        return True
+
 
 # -----------------------------------------------------------------------------
 # EOF

@@ -55,7 +55,7 @@ class Node(QtWidgets.QGraphicsItem):
         return QtCore.QRect(0, 0, self.width, self.height)
 
     def __init__(self, width=140, height=60, label='node'):
-        super(Node, self).__init__()
+        super(self.__class__, self).__init__()
         self.width = width
         self.height = height
         self.ports = []
