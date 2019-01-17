@@ -94,7 +94,7 @@ class Line(QtWidgets.QGraphicsPathItem):
 
     def mousePressEvent(self, event):
         self.point_b = event.pos()
-        self.moving = 'b'
+        self.target.disconnect(self)
 
     def _get_none_move_port(self):
         if self.source is None:
@@ -136,55 +136,18 @@ class Line(QtWidgets.QGraphicsPathItem):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
-        if self.moving == 'a':
-            start_of_line = self.target
-            end_of_line = self.source
-        else:
-            start_of_line = self.source
-            end_of_line = self.target
-
         # ポート以外で離したらラインごと削除
         if not isinstance(item, self.port):
             self.delete()
             return
 
-        if not start_of_line.can_connection(item):
-            if end_of_line is None:
-                # ライン新規作成時
-                start_of_line.delete_old_line()
-            else:
-                # ライン編集時は元の位置に戻す
-                pos = end_of_line.get_center()
-                setattr(self, 'point_{0}'.format(self.moving), pos)
+        none_move_port = self._get_none_move_port()
+
+        if not none_move_port.can_connection(item):
+            self.delete()
             return
 
-        if start_of_line.type == 'out':
-            # 出力ポートから入力ポートに接続した場合
-            print u'出力ポートから入力ポートに接続した場合'
-            # 古いポート側から削除
-            if self.target is not None:
-                self.target.remove_old_line()
-            # 新しいポート側に追加
-            self.target = item
-            self.target.delete_old_line()
-            self.point_b = item.get_center()
-
-        else:
-            # 入力ポートから出力ポートに接続した場合
-            self.target.delete_old_line()
-            self.source = item
-            self.point_a = item.get_center()
-
-        # 相手がPINの場合
-        if self.source.node.TYPE == 'Pin':
-            self.source.node.propagate(self.target, self.source, self)
-
-        # 自分がPINの場合
-        if self.target.node.TYPE == 'Pin':
-            self.target.node.propagate(self.source, self.target, self)
-
-        self.target.lines.append(self)
-        self.source.lines.append(self)
+        item.connect(self)
 
     def updatePath(self):
         path = QtGui.QPainterPath()

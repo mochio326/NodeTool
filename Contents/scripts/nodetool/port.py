@@ -138,19 +138,14 @@ class Port(QtWidgets.QGraphicsItem):
         if self.type == 'out':
             point_a = self.get_center()
             point_b = self.mapToScene(event.pos())
-            self.new_line = Line(point_a, point_b, self.color)
-            self.scene().addItem(self.new_line)
-            self.new_line.source = self
 
         elif self.type == 'in':
             point_a = self.mapToScene(event.pos())
             point_b = self.get_center()
-            self.new_line = Line(point_a, point_b, self.color)
-            self.scene().addItem(self.new_line)
-            self.new_line.target = self
 
-        else:
-            super(Port, self).mousePressEvent(event)
+        self.new_line = Line(point_a, point_b, self.color)
+        self.scene().addItem(self.new_line)
+        self.connect(self.new_line)
 
     def mouseMoveEvent(self, event):
         self.new_line.mouseMoveEvent(event)
@@ -158,47 +153,32 @@ class Port(QtWidgets.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         self.new_line.mouseReleaseEvent(event)
 
-    def delete_new_line(self, event):
-        self.scene().removeItem(self.new_line)
-        self.new_line = None
-        super(Port, self).mouseReleaseEvent(event)
-        return
-
-    def remove_old_line(self):
-        # 既に接続済みのラインがあったら接続を解除。ラインは消さない
-        if len(self.lines) > 0:
-            line = self.lines[0]
-            _target = line.target
-            _target.lines.remove(line)
-            self.lines = []
-            self.update()
-
-    def delete_old_line(self):
-        # 既に接続済みのラインがあったら存在ごと削除
-        if len(self.lines) > 0:
-            line = self.lines[0]
-            _target = line.target
-            _source = line.source
-            _target.lines.remove(line)
-            _source.lines.remove(line)
-            self.lines = []
-            self.scene().removeItem(line)
-            self.update()
-
     def disconnect(self, line):
-        if line in self.lines:
-            self.lines.remove(line)
+        if line not in self.lines:
+            return
+
+        if self.type == 'in':
+            line.target = None
+        else:
+            line.source = None
+        self.lines.remove(line)
         if self.node.TYPE == 'Pin':
             self.node.return_initial_state()
-
+        self.update()
 
     def connect(self, line):
         if self.type == 'in':
             if len(self.lines) > 0:
-                line = self.lines[0]
-                line.delete()
+                _l = self.lines[0]
+                _l.delete()
                 self.lines = []
+            line.target = self
+            line.point_b = self.get_center()
+        else:
+            line.source = self
+            line.point_a = self.get_center()
         self.lines.append(line)
+        self.update()
 
     def get_center(self):
         rect = self.boundingRect()
