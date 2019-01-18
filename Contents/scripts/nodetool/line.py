@@ -141,15 +141,16 @@ class Line(QtWidgets.QGraphicsPathItem):
             self.delete()
             return
 
-        none_move_port = self._get_none_move_port()
+        _none_move_port = self._get_none_move_port()
 
-        if not none_move_port.can_connection(item):
+        if not _none_move_port.can_connection(item):
             self.delete()
             return
 
+        _none_move_port.connect(self)
         item.connect(self)
 
-    def updatePath(self):
+    def update_path(self):
         path = QtGui.QPainterPath()
         path.moveTo(self.point_a)
         dx = self.point_b.x() - self.point_a.x()
@@ -185,7 +186,7 @@ class Line(QtWidgets.QGraphicsPathItem):
     @point_a.setter
     def point_a(self, point):
         self._point_a = point
-        self.updatePath()
+        self.update_path()
 
     @property
     def point_b(self):
@@ -194,7 +195,7 @@ class Line(QtWidgets.QGraphicsPathItem):
     @point_b.setter
     def point_b(self, point):
         self._point_b = point
-        self.updatePath()
+        self.update_path()
 
     @property
     def source(self):

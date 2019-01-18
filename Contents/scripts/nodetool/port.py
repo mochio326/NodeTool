@@ -145,7 +145,7 @@ class Port(QtWidgets.QGraphicsItem):
 
         self.new_line = Line(point_a, point_b, self.color)
         self.scene().addItem(self.new_line)
-        self.connect(self.new_line)
+        self.connect(self.new_line, True)
 
     def mouseMoveEvent(self, event):
         self.new_line.mouseMoveEvent(event)
@@ -166,9 +166,9 @@ class Port(QtWidgets.QGraphicsItem):
             self.node.return_initial_state()
         self.update()
 
-    def connect(self, line):
+    def connect(self, line, not_del=False):
         if self.type == 'in':
-            if len(self.lines) > 0:
+            if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
                 _l.delete()
                 self.lines = []
@@ -177,7 +177,8 @@ class Port(QtWidgets.QGraphicsItem):
         else:
             line.source = self
             line.point_a = self.get_center()
-        self.lines.append(line)
+        if not not_del:
+            self.lines.append(line)
         self.update()
 
     def get_center(self):
