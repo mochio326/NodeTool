@@ -68,6 +68,7 @@ class LineArrow(QtWidgets.QGraphicsItem):
 
 
 class Line(QtWidgets.QGraphicsPathItem):
+    DEF_Z_VALUE = 0.0
 
     def __init__(self, point_a, point_b, color):
         from .port import Port
@@ -115,6 +116,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.scene().removeItem(self)
 
     def mouseMoveEvent(self, event):
+        self.setZValue(100)
         pos = event.scenePos().toPoint()
         self.update_moving_point(pos)
         none_move_port = self._get_none_move_port()
@@ -133,6 +135,7 @@ class Line(QtWidgets.QGraphicsPathItem):
                 self.hover_port = None
 
     def mouseReleaseEvent(self, event):
+        self.setZValue(self.DEF_Z_VALUE)
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 

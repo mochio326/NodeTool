@@ -49,6 +49,7 @@ class NodeLabel(QtWidgets.QGraphicsItem):
 
 class Node(QtWidgets.QGraphicsItem):
     TYPE = 'Node'
+    DEF_Z_VALUE = 0.1
 
     @property
     def rect(self):
@@ -110,18 +111,43 @@ class Node(QtWidgets.QGraphicsItem):
             painter.setPen(self.pen)
         painter.drawRoundedRect(self.rect, 10.0, 10.0)
 
+    def mousePressEvent(self, event):
+        # 自身と関連するラインを見やすくするために最前面表示
+        self.setZValue(100.0)
+        for _p in self.ports:
+            for _l in _p.lines:
+                _l.setZValue(100.0)
+        super(self.__class__, self).mousePressEvent(event)
+
     def mouseMoveEvent(self, event):
         super(Node, self).mouseMoveEvent(event)
         # 自身以外も選択されている場合にまとめて処理する
         for _n in self.scene().selectedItems():
             for _s in _n.ports:
                 for line in _s.lines:
-                    if _s.type == 'out':
-                        line.point_a = line.source.get_center()
-                        line.point_b = line.target.get_center()
-                    if _s.type == 'in':
-                        line.point_a = line.source.get_center()
-                        line.point_b = line.target.get_center()
+                    line.point_a = line.source.get_center()
+                    line.point_b = line.target.get_center()
+
+    def get_scene_nodes(self):
+        # シーン内のノードのみ取得
+        for _i in self.scene().items():
+            if not isinstance(_i, self.__class__):
+                continue
+            yield _i
+
+    def mouseReleaseEvent(self, event):
+        # ノードを現在の描画順を維持したまま数値を整頓
+        node_z_list = []
+        for _n in self.get_scene_nodes():
+            node_z_list.append([_n.zValue(), _n])
+        node_z_list = sorted(node_z_list, key=lambda x:x[0])
+        for _i, _n in enumerate(node_z_list):
+            _n[1].setZValue(self.DEF_Z_VALUE + 0.01 * _i)
+        # ラインは最後面に戻しとく
+        for _p in self.ports:
+            for _l in _p.lines:
+                _l.setZValue(_l.DEF_Z_VALUE)
+        super(self.__class__, self).mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()
