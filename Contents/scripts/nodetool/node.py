@@ -123,10 +123,8 @@ class Node(QtWidgets.QGraphicsItem):
         super(Node, self).mouseMoveEvent(event)
         # 自身以外も選択されている場合にまとめて処理する
         for _n in self.scene().selectedItems():
-            for _s in _n.ports:
-                for line in _s.lines:
-                    line.point_a = line.source.get_center()
-                    line.point_b = line.target.get_center()
+            for _p in _n.ports:
+                _p.update_connect_line_pos()
 
     def get_scene_nodes(self):
         # シーン内のノードのみ取得

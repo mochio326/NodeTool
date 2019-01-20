@@ -116,7 +116,9 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.scene().removeItem(self)
 
     def mouseMoveEvent(self, event):
-        self.setZValue(100)
+        # 一度ラインを後ろにもっていかないとライン自体をitemとして取得してしまう
+        self.setZValue(self.DEF_Z_VALUE)
+
         pos = event.scenePos().toPoint()
         self.update_moving_point(pos)
         none_move_port = self._get_none_move_port()
@@ -133,6 +135,9 @@ class Line(QtWidgets.QGraphicsPathItem):
             if self.hover_port is not None:
                 self.hover_port.hoverLeaveEvent(None)
                 self.hover_port = None
+
+        self.setZValue(100)
+
 
     def mouseReleaseEvent(self, event):
         self.setZValue(self.DEF_Z_VALUE)

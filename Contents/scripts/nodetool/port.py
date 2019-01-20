@@ -200,6 +200,13 @@ class Port(QtWidgets.QGraphicsItem):
             return False
         return True
 
+    def update_connect_line_pos(self):
+        if self.type == 'in':
+            _p = 'point_b'
+        else:
+            _p = 'point_a'
+        for _l in self.lines:
+            setattr(_l, _p, self.get_center())
 
 # -----------------------------------------------------------------------------
 # EOF
