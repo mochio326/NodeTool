@@ -45,8 +45,8 @@ class SideBar(QtWidgets.QFrame):
         box = Node(label='Int Node')
         box.add_port('in', QtCore.Qt.red, 'Int', 'in')
         box.add_port('out', QtCore.Qt.red, 'Int', 'out')
-        window.scene.addItem(box)
-        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
+        window.view.add_item_on_center(box)
+
 
     def clickedAddBoxButton2(self):
         window = self.window()
@@ -54,15 +54,12 @@ class SideBar(QtWidgets.QFrame):
         box.add_port('in', QtCore.Qt.green, 'Bool', 'in')
         box.add_port('out', QtCore.Qt.green, 'Bool', 'out')
         box.add_port('out', QtCore.Qt.red, 'Int', 'out')
-
-        window.scene.addItem(box)
-        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
+        window.view.add_item_on_center(box)
 
     def clickedAddPinButton(self):
         window = self.window()
         box = Pin(width=30, height=30, label=None)
-        window.scene.addItem(box)
-        box.setPos(window.scene.width() / 2, window.scene.height() / 2)
+        window.view.add_item_on_center(box)
 
 
 class NodeWindow(QtWidgets.QMainWindow):
@@ -70,6 +67,8 @@ class NodeWindow(QtWidgets.QMainWindow):
         super(NodeWindow, self).__init__(parent)
         self.setWindowTitle('Node Window')
         self.initUi()
+        self.move(200, 150)
+        self.setFixedSize(800, 500)
 
     def initUi(self):
         # Window.

@@ -98,6 +98,40 @@ class View(QtWidgets.QGraphicsView):
             self.setCursor(QtCore.Qt.ArrowCursor)
         super(View, self).mouseReleaseEvent(event)
 
+    def keyPressEvent(self, event):
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ControlModifier:
+            if event.key() == QtCore.Qt.Key_C:
+                print 'copy'
+                # self._copy()
+                return
+            if event.key() == QtCore.Qt.Key_V:
+                print 'paste'
+                # self._paste()
+                return
+            if event.key() == QtCore.Qt.Key_X:
+                # self._cut()
+                print 'cut'
+                return
+            if event.key() == QtCore.Qt.Key_Z:
+                # self._undo()
+                print 'undo'
+                return
+            if event.key() == QtCore.Qt.Key_Y:
+                print 'redo'
+                # self._redo()
+                return
+
+        if event.key() == QtCore.Qt.Key_Delete:
+            print 'delete'
+            # self._delete()
+            return
+
+    def add_item_on_center(self, widget):
+        self.scene().addItem(widget)
+        _pos = self.mapToScene(self.width() / 2, self.height() / 2)
+        widget.setPos(_pos)
+
 
 # -----------------------------------------------------------------------------
 # EOF
