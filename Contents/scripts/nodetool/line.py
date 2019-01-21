@@ -80,7 +80,6 @@ class Line(QtWidgets.QGraphicsPathItem):
         self._point_b = point_b
         self._source = None
         self._target = None
-        self.moving = None
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(1)
