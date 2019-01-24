@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-from .port import Port
+from . import port
 
 
 class NodeLabel(QtWidgets.QGraphicsItem):
@@ -56,7 +56,7 @@ class Node(QtWidgets.QGraphicsItem):
         return QtCore.QRect(0, 0, self.width, self.height)
 
     def __init__(self, width=140, height=60, label='node'):
-        super(self.__class__, self).__init__()
+        super(Node, self).__init__()
         self.width = width
         self.height = height
         self.ports = []
@@ -89,7 +89,7 @@ class Node(QtWidgets.QGraphicsItem):
 
     def add_port(self, port_type, color, value_type, label):
         _y = self.port_init_y + 20 * len(self.ports)
-        _s = Port(self, port_type, color, value_type, _y, label)
+        _s = port.Port(self, port_type, color, value_type, _y, label)
         self.ports.append(_s)
 
         self.height = _y + 25
@@ -117,7 +117,7 @@ class Node(QtWidgets.QGraphicsItem):
         for _p in self.ports:
             for _l in _p.lines:
                 _l.setZValue(100.0)
-        super(self.__class__, self).mousePressEvent(event)
+        super(Node, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         super(Node, self).mouseMoveEvent(event)
@@ -145,7 +145,13 @@ class Node(QtWidgets.QGraphicsItem):
         for _p in self.ports:
             for _l in _p.lines:
                 _l.setZValue(_l.DEF_Z_VALUE)
-        super(self.__class__, self).mouseReleaseEvent(event)
+        super(Node, self).mouseReleaseEvent(event)
+
+    def delete(self):
+        for _p in self.ports:
+            for _l in _p.lines:
+                _l.delete()
+        self.scene().removeItem(self)
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()

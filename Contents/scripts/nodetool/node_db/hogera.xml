@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Node name='xml_node' label="hogehogera">
+    <Pin type="in" label="hogein" value_type="Int" />
+    <Pin type="out" label="hogeout" value_type="Int" />
+</Node>

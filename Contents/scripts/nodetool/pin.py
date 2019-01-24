@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-from .node import Node
-from .port import Port
+from . import node
+from . import port
 
 
-class Pin(Node):
+class Pin(node.Node):
     TYPE = 'Pin'
 
     def __init__(self, *args, **kwargs):
         self.init_color = QtCore.Qt.gray
         self.init_type = None
         super(Pin, self).__init__(*args, **kwargs)
-        self.input_port = Port(self, 'in', self.init_color, self.init_type, self.port_init_y)
-        self.output_port = Port(self, 'out', self.init_color, self.init_type, self.port_init_y)
+        self.input_port = port.Port(self, 'in', self.init_color, self.init_type, self.port_init_y)
+        self.output_port = port.Port(self, 'out', self.init_color, self.init_type, self.port_init_y)
         self.ports.append(self.input_port)
         self.ports.append(self.output_port)
 

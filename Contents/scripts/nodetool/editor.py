@@ -6,7 +6,7 @@ from shiboken2 import wrapInstance
 from .node import Node
 from .pin import Pin
 from .view import View
-
+from . import common
 
 class SideBar(QtWidgets.QFrame):
     def __init__(self, parent):
@@ -42,11 +42,8 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
-        box = Node(label='Int Node')
-        box.add_port('in', QtCore.Qt.red, 'Int', 'in')
-        box.add_port('out', QtCore.Qt.red, 'Int', 'out')
+        box = common.create_node_for_xml()
         window.view.add_item_on_center(box)
-
 
     def clickedAddBoxButton2(self):
         window = self.window()

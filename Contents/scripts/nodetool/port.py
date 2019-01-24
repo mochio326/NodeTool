@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-from .line import Line
+from . import line
 
 
 class PortLabel(QtWidgets.QGraphicsItem):
@@ -96,7 +96,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.pen.setWidth(2)
         self.pen.setColor(self.color)
 
-        # Lines.
+        # line.Lines.
         self.new_lines = None
         self.lines = []
 
@@ -143,7 +143,7 @@ class Port(QtWidgets.QGraphicsItem):
             point_a = self.mapToScene(event.pos())
             point_b = self.get_center()
 
-        self.new_line = Line(point_a, point_b, self.color)
+        self.new_line = line.Line(point_a, point_b, self.color)
         self.scene().addItem(self.new_line)
         self.connect(self.new_line, True)
 
@@ -153,32 +153,32 @@ class Port(QtWidgets.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         self.new_line.mouseReleaseEvent(event)
 
-    def disconnect(self, line):
-        if line not in self.lines:
+    def disconnect(self, line_):
+        if line_ not in self.lines:
             return
 
         if self.type == 'in':
-            line.target = None
+            line_.target = None
         else:
-            line.source = None
-        self.lines.remove(line)
+            line_.source = None
+        self.lines.remove(line_)
         if self.node.TYPE == 'Pin':
             self.node.return_initial_state()
         self.update()
 
-    def connect(self, line, not_del=False):
+    def connect(self, line_, not_del=False):
         if self.type == 'in':
             if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
                 _l.delete()
                 self.lines = []
-            line.target = self
-            line.point_b = self.get_center()
+            line_.target = self
+            line_.point_b = self.get_center()
         else:
-            line.source = self
-            line.point_a = self.get_center()
+            line_.source = self
+            line_.point_a = self.get_center()
         if not not_del:
-            self.lines.append(line)
+            self.lines.append(line_)
         self.update()
 
     def get_center(self):

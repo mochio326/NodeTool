@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-
+import copy
 
 class View(QtWidgets.QGraphicsView):
     """
@@ -17,6 +17,7 @@ class View(QtWidgets.QGraphicsView):
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.SmartViewportUpdate)
         self.drag = False
+        self._clipboard = None
 
     def drawBackground(self, painter, rect):
         scene_height = self.sceneRect().height()
@@ -102,12 +103,10 @@ class View(QtWidgets.QGraphicsView):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
             if event.key() == QtCore.Qt.Key_C:
-                print 'copy'
-                # self._copy()
+                self._copy()
                 return
             if event.key() == QtCore.Qt.Key_V:
-                print 'paste'
-                # self._paste()
+                self._paste()
                 return
             if event.key() == QtCore.Qt.Key_X:
                 # self._cut()
@@ -123,8 +122,7 @@ class View(QtWidgets.QGraphicsView):
                 return
 
         if event.key() == QtCore.Qt.Key_Delete:
-            print 'delete'
-            # self._delete()
+            self._delete()
             return
 
     def add_item_on_center(self, widget):
@@ -132,6 +130,20 @@ class View(QtWidgets.QGraphicsView):
         _pos = self.mapToScene(self.width() / 2, self.height() / 2)
         widget.setPos(_pos)
 
+    def _delete(self):
+        for _n in self.scene().selectedItems():
+            _n.delete()
+
+    def _copy(self):
+        for _n in self.scene().selectedItems():
+            print _n
+            self._clipboard = copy.deepcopy(_n)
+
+    def _paste(self):
+        if self._clipboard is None:
+            return
+        self._clipboard.__init__()
+        self.add_item_on_center(self._clipboard)
 
 # -----------------------------------------------------------------------------
 # EOF
