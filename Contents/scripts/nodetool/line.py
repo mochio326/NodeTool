@@ -137,7 +137,6 @@ class Line(QtWidgets.QGraphicsPathItem):
 
         self.setZValue(100)
 
-
     def mouseReleaseEvent(self, event):
         self.setZValue(self.DEF_Z_VALUE)
         pos = event.scenePos().toPoint()

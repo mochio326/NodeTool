@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Node Group='test' Label="bool test">
+    <Port Type="in" Label="b_in" ValueType="Bool" />
+    <Port Type="out" Label="b_out" ValueType="Bool" />
+    <Port Type="out" Label="i_out" ValueType="Int" />
+</Node>

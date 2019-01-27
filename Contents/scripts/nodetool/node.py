@@ -55,13 +55,17 @@ class Node(QtWidgets.QGraphicsItem):
     def rect(self):
         return QtCore.QRect(0, 0, self.width, self.height)
 
-    def __init__(self, width=140, height=60, label='node'):
+    @property
+    def ports(self):
+        return [_item for _item in self.childItems() if isinstance(_item, port.Port)]
+
+    def __init__(self, name='', width=140, height=60, label='node'):
         super(Node, self).__init__()
+        self.name = name
+        self.setZValue(self.DEF_Z_VALUE)
         self.width = width
         self.height = height
-        self.ports = []
 
-        self.name = None
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
 
@@ -89,11 +93,10 @@ class Node(QtWidgets.QGraphicsItem):
 
     def add_port(self, port_type, color, value_type, label):
         _y = self.port_init_y + 20 * len(self.ports)
-        _s = port.Port(self, port_type, color, value_type, _y, label)
-        self.ports.append(_s)
-
+        p = port.Port(self, port_type, color, value_type, _y, label)
         self.height = _y + 25
         self.update()
+        return p
 
     def shape(self):
         path = QtGui.QPainterPath()

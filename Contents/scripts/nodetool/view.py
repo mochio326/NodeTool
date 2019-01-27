@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
 import copy
+from . import common
 
 class View(QtWidgets.QGraphicsView):
     """
@@ -135,15 +136,16 @@ class View(QtWidgets.QGraphicsView):
             _n.delete()
 
     def _copy(self):
+        self._clipboard = []
         for _n in self.scene().selectedItems():
-            print _n
-            self._clipboard = copy.deepcopy(_n)
+            self._clipboard.append(_n.name)
 
     def _paste(self):
         if self._clipboard is None:
             return
-        self._clipboard.__init__()
-        self.add_item_on_center(self._clipboard)
+        for _c in self._clipboard:
+            box = common.create_node_for_xml(_c)
+            self.add_item_on_center(box)
 
 # -----------------------------------------------------------------------------
 # EOF

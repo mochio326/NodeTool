@@ -83,7 +83,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.rect = QtCore.QRect(rect_x, self.position_y, 12, 12)
 
         if label is not None:
-            PortLabel(self, self.type)
+            PortLabel(self, label)
 
         # Brush.
         self.brush = QtGui.QBrush()

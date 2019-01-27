@@ -42,15 +42,12 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
-        box = common.create_node_for_xml()
+        box = common.create_node_for_xml('hogera')
         window.view.add_item_on_center(box)
 
     def clickedAddBoxButton2(self):
         window = self.window()
-        box = Node(label='Bool Node')
-        box.add_port('in', QtCore.Qt.green, 'Bool', 'in')
-        box.add_port('out', QtCore.Qt.green, 'Bool', 'out')
-        box.add_port('out', QtCore.Qt.red, 'Int', 'out')
+        box = common.create_node_for_xml('test2')
         window.view.add_item_on_center(box)
 
     def clickedAddPinButton(self):
