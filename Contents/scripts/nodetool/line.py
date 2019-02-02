@@ -129,10 +129,10 @@ class Line(QtWidgets.QGraphicsPathItem):
         if isinstance(item, self.port):
             if none_move_port.can_connection(item):
                 self.hover_port = item
-                self.hover_port.hoverEnterEvent(None)
+                self.hover_port.change_to_hover_color()
         else:
             if self.hover_port is not None:
-                self.hover_port.hoverLeaveEvent(None)
+                self.hover_port.change_to_basic_color()
                 self.hover_port = None
 
         self.setZValue(100)
