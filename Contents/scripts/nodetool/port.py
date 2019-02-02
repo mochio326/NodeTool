@@ -43,12 +43,12 @@ class PortLabel(QtWidgets.QGraphicsItem):
 
         if self.port.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
-            label_x = port_item.port_size + 2
+            label_x = port_item.PORT_SIZE + 2
         else:
             self.text_align = QtCore.Qt.AlignRight
-            label_x = node_item.width - width - port_item.port_size
+            label_x = node_item.width - width - port_item.PORT_SIZE
 
-        return QtCore.QRect(label_x, port_item.position_y - self.text_size / 2, width, height)
+        return QtCore.QRect(label_x, 0 - self.text_size / 2, width, height)
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -60,27 +60,34 @@ class PortLabel(QtWidgets.QGraphicsItem):
 
 
 class Port(QtWidgets.QGraphicsItem):
+    PORT_SIZE = 12
+    INTERVAL_SIZE = 25
 
     @property
     def node(self):
         return self.parentItem()
 
-    def __init__(self, parent, port_type, color, value_type, position_y=30, label=None):
+    def __init__(self, parent, port_type=None, color=None, value_type=None, label=None):
         super(Port, self).__init__(parent)
         self.setAcceptHoverEvents(True)
         self.color = color
         self.value_type = value_type
-        self.port_size = 12
         self.hover_port = None
         self.type = port_type
-        self.position_y = position_y
         self.new_line = None
+        self.children_port_open = False
 
-        if self.type == 'in':
-            rect_x = 0 - self.port_size / 2
+        if isinstance(parent, Port):
+            rect_x = parent.rect.x()
+            self.type = parent.type
+
         else:
-            rect_x = parent.width - self.port_size / 2
-        self.rect = QtCore.QRect(rect_x, self.position_y, 12, 12)
+            if self.type == 'in':
+                rect_x = 0 - self.PORT_SIZE / 2
+            else:
+                rect_x = parent.width - self.PORT_SIZE / 2
+
+        self.rect = QtCore.QRect(rect_x, 0, 12, 12)
 
         if label is not None:
             PortLabel(self, label)
@@ -100,10 +107,32 @@ class Port(QtWidgets.QGraphicsItem):
         self.new_lines = None
         self.lines = []
 
+    def setY(self, value):
+        super(self.__class__, self).setY(value)
+
     def shape(self):
         path = QtGui.QPainterPath()
         path.addEllipse(self.boundingRect())
         return path
+
+    @property
+    def children_port(self):
+        return [_item for _item in self.childItems() if isinstance(_item, Port)]
+
+    def deploying_port(self):
+        #if not self.children_port_open:
+        #    return
+        _port_y = self.INTERVAL_SIZE
+        for _p in self.children_port:
+            _p.setY(_port_y)
+            _port_y = _port_y + self.INTERVAL_SIZE + len(_p.children_port) * self.INTERVAL_SIZE
+            _p.deploying_port()
+
+    @property
+    def height_space(self):
+        if not self.children_port_open:
+            return self.INTERVAL_SIZE
+
 
     def boundingRect(self):
         return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0,
@@ -119,15 +148,21 @@ class Port(QtWidgets.QGraphicsItem):
         painter.drawEllipse(self.rect)
 
     def hoverMoveEvent(self, event):
-        # Do your stuff here.
-        pass
+        if self.isUnderMouse():
+            self.change_to_hover_color()
 
     def hoverEnterEvent(self, event):
+        pass
+
+    def hoverLeaveEvent(self, event):
+        self.change_to_basic_color()
+
+    def change_to_hover_color(self):
         self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.brush.setColor(QtGui.QColor(180, 120, 190, 255))
         self.update()
 
-    def hoverLeaveEvent(self, event):
+    def change_to_basic_color(self):
         self.pen.setColor(self.color)
         self.brush.setColor(QtGui.QColor(180, 20, 90, 255))
         self.update()
@@ -182,10 +217,8 @@ class Port(QtWidgets.QGraphicsItem):
         self.update()
 
     def get_center(self):
-        rect = self.boundingRect()
-        center = QtCore.QPointF(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2)
-        center = self.mapToScene(center)
-        return center
+        center = QtCore.QPointF(self.rect.x() + self.rect.width() / 2, self.rect.y() + self.rect.height() / 2)
+        return self.mapToScene(center)
 
     def can_connection(self, port):
         if self.value_type != port.value_type:
@@ -207,6 +240,8 @@ class Port(QtWidgets.QGraphicsItem):
             _p = 'point_a'
         for _l in self.lines:
             setattr(_l, _p, self.get_center())
+        for cp in self.children_port:
+            cp.update_connect_line_pos()
 
 # -----------------------------------------------------------------------------
 # EOF

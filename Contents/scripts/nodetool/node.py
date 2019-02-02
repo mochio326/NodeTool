@@ -91,10 +91,8 @@ class Node(QtWidgets.QGraphicsItem):
         else:
             self.port_init_y = 10
 
-    def add_port(self, port_type, color, value_type, label):
-        _y = self.port_init_y + 20 * len(self.ports)
-        p = port.Port(self, port_type, color, value_type, _y, label)
-        self.height = _y + 25
+    def add_port(self, port_type, color, value_type, label=None):
+        p = port.Port(self, port_type=port_type, color=color, value_type=value_type, label=label)
         self.update()
         return p
 
@@ -104,6 +102,7 @@ class Node(QtWidgets.QGraphicsItem):
         return path
 
     def boundingRect(self):
+        self.deploying_port()
         return QtCore.QRectF(self.rect)
 
     def paint(self, painter, option, widget):
@@ -113,6 +112,14 @@ class Node(QtWidgets.QGraphicsItem):
         else:
             painter.setPen(self.pen)
         painter.drawRoundedRect(self.rect, 10.0, 10.0)
+
+    def deploying_port(self):
+        _port_y = self.port_init_y
+        for _p in self.ports:
+            _p.setY(_port_y)
+            _port_y = _port_y + port.Port.INTERVAL_SIZE + len(_p.children_port) * port.Port.INTERVAL_SIZE
+            _p.deploying_port()
+        self.height = _port_y + 5
 
     def mousePressEvent(self, event):
         # 自身と関連するラインを見やすくするために最前面表示

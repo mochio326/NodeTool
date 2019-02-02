@@ -32,9 +32,10 @@ def create_node_for_xml(xml_file=''):
     _ports = tree.findall('Port')
     port_color = PortColor()
     for _p in _ports:
-        n.add_port(_p.attrib['Type'], getattr(port_color, _p.attrib['ValueType']), _p.attrib['ValueType'],
+        p = n.add_port(_p.attrib['Type'], getattr(port_color, _p.attrib['ValueType']), _p.attrib['ValueType'],
                    _p.attrib['Label'])
-    return n
+
+    return n, p
 
 # -----------------------------------------------------------------------------
 # EOF

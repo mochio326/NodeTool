@@ -4,6 +4,7 @@ import maya.OpenMayaUI as OpenMayaUI
 from shiboken2 import wrapInstance
 
 from .node import Node
+from .port import Port
 from .pin import Pin
 from .view import View
 from . import common
@@ -42,12 +43,23 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
-        box = common.create_node_for_xml('hogera')
-        window.view.add_item_on_center(box)
+        n = Node(name='port test', label='port test')
+        p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
+        Port(p, color=QtCore.Qt.gray, value_type='Int')
+        Port(p, color=QtCore.Qt.gray, value_type='Int')
+
+        p = n.add_port('out', QtCore.Qt.red, 'Int', 'p_out')
+        Port(p, color=QtCore.Qt.green, value_type='Int')
+        Port(p, color=QtCore.Qt.green, value_type='Int')
+
+        p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
+
+
+        window.view.add_item_on_center(n)
 
     def clickedAddBoxButton2(self):
         window = self.window()
-        box = common.create_node_for_xml('test2')
+        box, p = common.create_node_for_xml('test2')
         window.view.add_item_on_center(box)
 
     def clickedAddPinButton(self):
