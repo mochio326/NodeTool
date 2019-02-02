@@ -6,6 +6,10 @@ from . import line
 class PortLabel(QtWidgets.QGraphicsItem):
 
     @property
+    def font(self):
+        return QtGui.QFont('Decorative', self.text_size)
+
+    @property
     def port(self):
         return self.parentItem()
 
@@ -22,13 +26,8 @@ class PortLabel(QtWidgets.QGraphicsItem):
 
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)
-
         painter.setFont(self.font)
         painter.drawText(self.boundingRect(), self.text_align, self.label)
-
-    @property
-    def font(self):
-        return QtGui.QFont('Decorative', self.text_size)
 
     def boundingRect(self):
         node_item = self.port.node
@@ -65,7 +64,20 @@ class Port(QtWidgets.QGraphicsItem):
 
     @property
     def node(self):
-        return self.parentItem()
+        from .node import Node
+        _p = self.parentItem()
+        while not isinstance(_p, Node):
+            _p = _p.parentItem()
+        return _p
+
+    @property
+    def children_port(self):
+        return [_item for _item in self.childItems() if isinstance(_item, Port)]
+
+    @property
+    def height_space(self):
+        if not self.children_port_open:
+            return self.INTERVAL_SIZE
 
     def __init__(self, parent, port_type=None, color=None, value_type=None, label=None):
         super(Port, self).__init__(parent)
@@ -115,25 +127,6 @@ class Port(QtWidgets.QGraphicsItem):
         path.addEllipse(self.boundingRect())
         return path
 
-    @property
-    def children_port(self):
-        return [_item for _item in self.childItems() if isinstance(_item, Port)]
-
-    def deploying_port(self):
-        #if not self.children_port_open:
-        #    return
-        _port_y = self.INTERVAL_SIZE
-        for _p in self.children_port:
-            _p.setY(_port_y)
-            _port_y = _port_y + self.INTERVAL_SIZE + len(_p.children_port) * self.INTERVAL_SIZE
-            _p.deploying_port()
-
-    @property
-    def height_space(self):
-        if not self.children_port_open:
-            return self.INTERVAL_SIZE
-
-
     def boundingRect(self):
         return QtCore.QRectF(self.rect.x() - 5.0, self.rect.y() - 5.0, self.rect.width() + 5.0,
                              self.rect.height() + 5.0)
@@ -157,16 +150,6 @@ class Port(QtWidgets.QGraphicsItem):
     def hoverLeaveEvent(self, event):
         self.change_to_basic_color()
 
-    def change_to_hover_color(self):
-        self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
-        self.brush.setColor(QtGui.QColor(180, 120, 190, 255))
-        self.update()
-
-    def change_to_basic_color(self):
-        self.pen.setColor(self.color)
-        self.brush.setColor(QtGui.QColor(180, 20, 90, 255))
-        self.update()
-
     def mousePressEvent(self, event):
         self.hover_port = None
 
@@ -187,6 +170,25 @@ class Port(QtWidgets.QGraphicsItem):
 
     def mouseReleaseEvent(self, event):
         self.new_line.mouseReleaseEvent(event)
+
+    def deploying_port(self):
+        # if not self.children_port_open:
+        #     return
+        _port_y = self.INTERVAL_SIZE
+        for _p in self.children_port:
+            _p.setY(_port_y)
+            _port_y = _port_y + self.INTERVAL_SIZE + len(_p.children_port) * self.INTERVAL_SIZE
+            _p.deploying_port()
+
+    def change_to_hover_color(self):
+        self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
+        self.brush.setColor(QtGui.QColor(180, 120, 190, 255))
+        self.update()
+
+    def change_to_basic_color(self):
+        self.pen.setColor(self.color)
+        self.brush.setColor(QtGui.QColor(180, 20, 90, 255))
+        self.update()
 
     def disconnect(self, line_):
         if line_ not in self.lines:
