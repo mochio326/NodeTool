@@ -40,12 +40,14 @@ class PortLabel(QtWidgets.QGraphicsItem):
         # こういう場合、height()ではなく、ascent()を使ってもOK!
         height = height - font_metrics.descent()
 
+        offset = self.port.parent_port_count() * 10
+
         if self.port.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
-            label_x = port_item.PORT_SIZE + 2
+            label_x = port_item.PORT_SIZE + 2 + offset
         else:
             self.text_align = QtCore.Qt.AlignRight
-            label_x = node_item.width - width - port_item.PORT_SIZE
+            label_x = node_item.width - width - port_item.PORT_SIZE - offset
 
         return QtCore.QRect(label_x, 0 - self.text_size / 2, width, height)
 
@@ -55,7 +57,7 @@ class PortLabel(QtWidgets.QGraphicsItem):
         return path
 
     def mousePressEvent(self, event):
-        print self.label
+        self.port.open_and_close_child()
 
 
 class Port(QtWidgets.QGraphicsItem):
@@ -64,11 +66,7 @@ class Port(QtWidgets.QGraphicsItem):
 
     @property
     def node(self):
-        from .node import Node
-        _p = self.parentItem()
-        while not isinstance(_p, Node):
-            _p = _p.parentItem()
-        return _p
+        return self.topLevelItem()
 
     @property
     def children_port(self):
@@ -78,6 +76,10 @@ class Port(QtWidgets.QGraphicsItem):
     def height_space(self):
         if not self.children_port_open:
             return self.INTERVAL_SIZE
+        h = self.INTERVAL_SIZE
+        for _p in self.children_port:
+            h = h + _p.height_space
+        return h
 
     def __init__(self, parent, port_type=None, color=None, value_type=None, label=None):
         super(Port, self).__init__(parent)
@@ -118,6 +120,7 @@ class Port(QtWidgets.QGraphicsItem):
         # line.Lines.
         self.new_lines = None
         self.lines = []
+        self.temp_lines = []
 
     def setY(self, value):
         super(self.__class__, self).setY(value)
@@ -135,7 +138,10 @@ class Port(QtWidgets.QGraphicsItem):
         if len(self.lines) == 0:
             self.brush.setColor(QtGui.QColor(60, 60, 60, 255))
         else:
-            self.brush.setColor(self.color)
+            for _l in self.lines:
+                if isinstance(_l, line.Line):
+                    self.brush.setColor(self.color)
+                    break
         painter.setBrush(self.brush)
         painter.setPen(self.pen)
         painter.drawEllipse(self.rect)
@@ -171,13 +177,76 @@ class Port(QtWidgets.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         self.new_line.mouseReleaseEvent(event)
 
-    def deploying_port(self):
-        # if not self.children_port_open:
-        #     return
-        _port_y = self.INTERVAL_SIZE
+    def parent_port_count(self):
+        count = int(0)
+        for _ in self._parent_port_iter():
+            count = count + 1
+        return count
+
+    def check_parent_port_open(self):
+        _flag = []
+        for _p in self._parent_port_iter():
+            _flag.append(_p.children_port_open)
+        return all(_flag)
+
+    def _parent_port_iter(self):
+        _p = self.parentItem()
+        while isinstance(_p, Port):
+            yield _p
+            _p = _p.parentItem()
+
+    def get_visible_parent_port(self):
+        for _p in self._parent_port_iter():
+            if _p.isVisible():
+                return _p
+
+    def open_and_close_child(self):
+        self.children_port_open = not self.children_port_open
+        self.delete_temp_line()
+        self.node.deploying_port()
+        self.create_temp_line()
+        # open
+        self.node.update()
+
+    def delete_temp_line(self):
+        if not self.children_port_open:
+            return
+        # スライスで反転してから消さないとリストが途中で狂うので注意
+        for _l in self.temp_lines[::-1]:
+            _l.delete()
+
+    def create_temp_line(self):
+        hide_lines = self.check_children_lines_hide()
+        for _l in hide_lines:
+            _source = _l.source.get_visible_parent_port()
+            _target = _l.target.get_visible_parent_port()
+            point_a = _source.get_center()
+            point_b = _target.get_center()
+            _temp_line = line.TempLine(point_a, point_b)
+            self.scene().addItem(_temp_line)
+            _source.connect_temp(_temp_line)
+            _target.connect_temp(_temp_line)
+
+    def check_children_lines_hide(self):
+        vis_list = []
         for _p in self.children_port:
+            for _l in _p.lines:
+                if not _l.isVisible():
+                    vis_list.append(_l)
+            vis_list.extend(_p.check_children_lines_hide())
+        return vis_list
+
+    def deploying_port(self):
+        if self.children_port_open and self.check_parent_port_open():
+            _port_y = self.INTERVAL_SIZE
+        else:
+            _port_y = 0
+        for _p in self.children_port:
+            _p.setVisible(self.children_port_open)
             _p.setY(_port_y)
-            _port_y = _port_y + self.INTERVAL_SIZE + len(_p.children_port) * self.INTERVAL_SIZE
+            if self.children_port_open:
+                _port_y = _port_y + _p.height_space
+            _p.update_connect_line_pos()
             _p.deploying_port()
 
     def change_to_hover_color(self):
@@ -193,7 +262,6 @@ class Port(QtWidgets.QGraphicsItem):
     def disconnect(self, line_):
         if line_ not in self.lines:
             return
-
         if self.type == 'in':
             line_.target = None
         else:
@@ -201,6 +269,16 @@ class Port(QtWidgets.QGraphicsItem):
         self.lines.remove(line_)
         if self.node.TYPE == 'Pin':
             self.node.return_initial_state()
+        self.update()
+
+    def disconnect_temp(self, line_):
+        if line_ not in self.temp_lines:
+            return
+        if self.type == 'in':
+            line_.target = None
+        else:
+            line_.source = None
+        self.temp_lines.remove(line_)
         self.update()
 
     def connect(self, line_, not_del=False):
@@ -216,6 +294,16 @@ class Port(QtWidgets.QGraphicsItem):
             line_.point_a = self.get_center()
         if not not_del:
             self.lines.append(line_)
+        self.update()
+
+    def connect_temp(self, line_):
+        if self.type == 'in':
+            line_.target = self
+            line_.point_b = self.get_center()
+        else:
+            line_.source = self
+            line_.point_a = self.get_center()
+        self.temp_lines.append(line_)
         self.update()
 
     def get_center(self):
@@ -241,6 +329,8 @@ class Port(QtWidgets.QGraphicsItem):
         else:
             _p = 'point_a'
         for _l in self.lines:
+            setattr(_l, _p, self.get_center())
+        for _l in self.temp_lines:
             setattr(_l, _p, self.get_center())
         for cp in self.children_port:
             cp.update_connect_line_pos()

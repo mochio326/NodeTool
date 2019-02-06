@@ -93,6 +93,7 @@ class Node(QtWidgets.QGraphicsItem):
 
     def add_port(self, port_type, color, value_type, label=None):
         p = port.Port(self, port_type=port_type, color=color, value_type=value_type, label=label)
+        self.deploying_port()
         self.update()
         return p
 
@@ -102,8 +103,11 @@ class Node(QtWidgets.QGraphicsItem):
         return path
 
     def boundingRect(self):
-        self.deploying_port()
-        return QtCore.QRectF(self.rect)
+        # _height = self.height
+        # self.deploying_port()
+        # if _height < self.height:
+        #     _height = self.height
+        return QtCore.QRectF(0, 0, self.width, self.height)
 
     def paint(self, painter, option, widget):
         painter.setBrush(self.brush)
@@ -117,7 +121,7 @@ class Node(QtWidgets.QGraphicsItem):
         _port_y = self.port_init_y
         for _p in self.ports:
             _p.setY(_port_y)
-            _port_y = _port_y + port.Port.INTERVAL_SIZE + len(_p.children_port) * port.Port.INTERVAL_SIZE
+            _port_y = _port_y + _p.height_space
             _p.deploying_port()
         self.height = _port_y + 5
 

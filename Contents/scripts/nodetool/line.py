@@ -65,8 +65,6 @@ class LineArrow(QtWidgets.QGraphicsItem):
         path = QtGui.QPainterPath()
         path.addEllipse(self.boundingRect())
         return path
-
-
 class Line(QtWidgets.QGraphicsPathItem):
     DEF_Z_VALUE = 0.0
 
@@ -157,6 +155,13 @@ class Line(QtWidgets.QGraphicsPathItem):
         item.connect(self)
 
     def update_path(self):
+        if self.target is not None and self.target is not None:
+            if not self.target.isVisible() and not self.source.isVisible():
+                self.setVisible(False)
+                return
+            else:
+                self.setVisible(True)
+
         path = QtGui.QPainterPath()
         path.moveTo(self.point_a)
         dx = self.point_b.x() - self.point_a.x()
@@ -210,6 +215,7 @@ class Line(QtWidgets.QGraphicsPathItem):
     @source.setter
     def source(self, widget):
         self._source = widget
+        self._source = widget
 
     @property
     def target(self):
@@ -218,6 +224,19 @@ class Line(QtWidgets.QGraphicsPathItem):
     @target.setter
     def target(self, widget):
         self._target = widget
+
+
+class TempLine(Line):
+    def __init__(self, point_a, point_b):
+        super(TempLine, self).__init__(point_a, point_b, QtGui.QColor(244, 127, 65))
+        self.pen.setStyle(QtCore.Qt.DotLine)
+
+    def delete(self):
+        if self.source is not None:
+            self.source.disconnect_temp(self)
+        if self.target is not None:
+            self.target.disconnect_temp(self)
+        self.scene().removeItem(self)
 
 # -----------------------------------------------------------------------------
 # EOF

@@ -45,12 +45,16 @@ class SideBar(QtWidgets.QFrame):
         window = self.window()
         n = Node(name='port test', label='port test')
         p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
-        Port(p, color=QtCore.Qt.gray, value_type='Int')
-        Port(p, color=QtCore.Qt.gray, value_type='Int')
+        Port(p, color=QtCore.Qt.green, value_type='Int')
+        Port(p, color=QtCore.Qt.green, value_type='Int')
 
         p = n.add_port('out', QtCore.Qt.red, 'Int', 'p_out')
-        Port(p, color=QtCore.Qt.green, value_type='Int')
-        Port(p, color=QtCore.Qt.green, value_type='Int')
+        p1 = Port(p, color=QtCore.Qt.green, value_type='Int', label='AA')
+        p2 = Port(p, color=QtCore.Qt.green, value_type='Int', label='BBB')
+        Port(p2, color=QtCore.Qt.yellow, value_type='Int', label='CC')
+        Port(p2, color=QtCore.Qt.yellow, value_type='Int', label='DDD')
+        Port(p1, color=QtCore.Qt.darkCyan, value_type='Int', label='EEE')
+        Port(p1, color=QtCore.Qt.darkCyan, value_type='Int', label='FFF')
 
         p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
 
@@ -72,6 +76,9 @@ class NodeWindow(QtWidgets.QMainWindow):
     def __init__(self, parent):
         super(NodeWindow, self).__init__(parent)
         self.setWindowTitle('Node Window')
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+
         self.initUi()
         self.move(200, 150)
         self.setFixedSize(800, 500)
