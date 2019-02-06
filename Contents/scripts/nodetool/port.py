@@ -205,8 +205,8 @@ class Port(QtWidgets.QGraphicsItem):
         self.delete_temp_line()
         self.node.deploying_port()
         self.create_temp_line()
-        # open
         self.node.update()
+        self.scene().update()
 
     def delete_temp_line(self):
         if not self.children_port_open:

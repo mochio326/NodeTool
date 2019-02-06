@@ -103,10 +103,6 @@ class Node(QtWidgets.QGraphicsItem):
         return path
 
     def boundingRect(self):
-        # _height = self.height
-        # self.deploying_port()
-        # if _height < self.height:
-        #     _height = self.height
         return QtCore.QRectF(0, 0, self.width, self.height)
 
     def paint(self, painter, option, widget):
