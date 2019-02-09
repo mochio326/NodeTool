@@ -3,6 +3,84 @@ from .vendor.Qt import QtCore, QtGui, QtWidgets
 from . import line
 
 
+class PortExpandBox(QtWidgets.QGraphicsItem):
+    @property
+    def port(self):
+        return self.parentItem()
+
+    def __init__(self, parent):
+        super(PortExpandBox, self).__init__(parent)
+
+        # Pen.
+        self.pen = QtGui.QPen()
+        self.pen.setStyle(QtCore.Qt.SolidLine)
+        self.pen.setWidth(1)
+        self.pen.setColor(QtGui.QColor(125, 125, 125, 255))
+
+    def paint(self, painter, option, widget):
+        if len(self.port.children_port) == 0:
+            self.setVisible(False)
+            return
+        self.setVisible(True)
+        painter.setPen(self.pen)
+        painter.drawPath(self.shape())
+
+        offset_parent = self.port.parent_port_count() * 20
+
+        if self.port.type == 'in':
+            x = (self.port.PORT_SIZE / 2) + offset_parent + 3
+        else:
+            x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
+        self.setX(x)
+
+
+    def boundingRect(self):
+        rect = QtCore.QRect(0, 0, 10, 40)
+        return QtCore.QRectF(rect)
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addPolygon(QtCore.QRectF(0, 0, 10, 10))
+
+        path2 = QtGui.QPainterPath()
+        path2.moveTo(0, 5)
+        path2.lineTo(10, 5)
+
+        path.addPath(path2)
+
+        if self.port.type == 'in':
+            children_line_x = 15
+        else:
+            children_line_x = -8
+
+        if not self.port.children_port_expand:
+            path2 = QtGui.QPainterPath()
+            path2.moveTo(5, 0)
+            path2.lineTo(5, 10)
+            path.addPath(path2)
+
+        else:
+            # Children's line
+            y_min = 10
+            for _p in self.port.children_port:
+                y_max = _p.y() + 5
+
+                vertical_line = QtGui.QPainterPath()
+                vertical_line.moveTo(5, y_min)
+                vertical_line.lineTo(5, y_max)
+                path.addPath(vertical_line)
+
+                vertical_line = QtGui.QPainterPath()
+                vertical_line.moveTo(children_line_x, y_max)
+                vertical_line.lineTo(5, y_max)
+                path.addPath(vertical_line)
+
+        return path
+
+    def mousePressEvent(self, event):
+        self.port.expand()
+
+
 class PortLabel(QtWidgets.QGraphicsItem):
 
     @property
@@ -40,14 +118,18 @@ class PortLabel(QtWidgets.QGraphicsItem):
         # こういう場合、height()ではなく、ascent()を使ってもOK!
         height = height - font_metrics.descent()
 
-        offset = self.port.parent_port_count() * 10
+        offset_parent = self.port.parent_port_count() * 20
+        if len(self.port.children_port) > 0:
+            offset_child = 10
+        else:
+            offset_child = 0
 
         if self.port.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
-            label_x = port_item.PORT_SIZE + 2 + offset
+            label_x = port_item.PORT_SIZE + 2 + offset_parent + offset_child
         else:
             self.text_align = QtCore.Qt.AlignRight
-            label_x = node_item.width - width - port_item.PORT_SIZE - offset
+            label_x = node_item.width - width - port_item.PORT_SIZE - offset_parent - offset_child
 
         return QtCore.QRect(label_x, 0 - self.text_size / 2, width, height)
 
@@ -57,7 +139,7 @@ class PortLabel(QtWidgets.QGraphicsItem):
         return path
 
     def mousePressEvent(self, event):
-        self.port.open_and_close_child()
+        self.port.expand()
 
 
 class Port(QtWidgets.QGraphicsItem):
@@ -74,7 +156,7 @@ class Port(QtWidgets.QGraphicsItem):
 
     @property
     def height_space(self):
-        if not self.children_port_open:
+        if not self.children_port_expand:
             return self.INTERVAL_SIZE
         h = self.INTERVAL_SIZE
         for _p in self.children_port:
@@ -89,7 +171,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.hover_port = None
         self.type = port_type
         self.new_line = None
-        self.children_port_open = False
+        self.children_port_expand = False
 
         if isinstance(parent, Port):
             rect_x = parent.rect.x()
@@ -106,6 +188,9 @@ class Port(QtWidgets.QGraphicsItem):
         if label is not None:
             PortLabel(self, label)
 
+        self.expand_box = PortExpandBox(self)
+
+
         # Brush.
         self.brush = QtGui.QBrush()
         self.brush.setStyle(QtCore.Qt.SolidPattern)
@@ -118,7 +203,6 @@ class Port(QtWidgets.QGraphicsItem):
         self.pen.setColor(self.color)
 
         # line.Lines.
-        self.new_lines = None
         self.lines = []
         self.temp_lines = []
 
@@ -135,6 +219,7 @@ class Port(QtWidgets.QGraphicsItem):
                              self.rect.height() + 5.0)
 
     def paint(self, painter, option, widget):
+
         if len(self.lines) == 0:
             self.brush.setColor(QtGui.QColor(60, 60, 60, 255))
         else:
@@ -186,7 +271,7 @@ class Port(QtWidgets.QGraphicsItem):
     def check_parent_port_open(self):
         _flag = []
         for _p in self._parent_port_iter():
-            _flag.append(_p.children_port_open)
+            _flag.append(_p.children_port_expand)
         return all(_flag)
 
     def _parent_port_iter(self):
@@ -200,8 +285,8 @@ class Port(QtWidgets.QGraphicsItem):
             if _p.isVisible():
                 return _p
 
-    def open_and_close_child(self):
-        self.children_port_open = not self.children_port_open
+    def expand(self):
+        self.children_port_expand = not self.children_port_expand
         self.delete_temp_line()
         self.node.deploying_port()
         self.create_temp_line()
@@ -209,7 +294,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.scene().update()
 
     def delete_temp_line(self):
-        if not self.children_port_open:
+        if not self.children_port_expand:
             return
         # スライスで反転してから消さないとリストが途中で狂うので注意
         for _l in self.temp_lines[::-1]:
@@ -237,14 +322,14 @@ class Port(QtWidgets.QGraphicsItem):
         return vis_list
 
     def deploying_port(self):
-        if self.children_port_open and self.check_parent_port_open():
+        if self.children_port_expand and self.check_parent_port_open():
             _port_y = self.INTERVAL_SIZE
         else:
             _port_y = 0
         for _p in self.children_port:
-            _p.setVisible(self.children_port_open)
+            _p.setVisible(self.children_port_expand)
             _p.setY(_port_y)
-            if self.children_port_open:
+            if self.children_port_expand:
                 _port_y = _port_y + _p.height_space
             _p.update_connect_line_pos()
             _p.deploying_port()

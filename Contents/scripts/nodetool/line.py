@@ -65,6 +65,8 @@ class LineArrow(QtWidgets.QGraphicsItem):
         path = QtGui.QPainterPath()
         path.addEllipse(self.boundingRect())
         return path
+
+
 class Line(QtWidgets.QGraphicsPathItem):
     DEF_Z_VALUE = 0.0
 
@@ -128,6 +130,7 @@ class Line(QtWidgets.QGraphicsPathItem):
             if none_move_port.can_connection(item):
                 self.hover_port = item
                 self.hover_port.change_to_hover_color()
+                self.update_moving_point(item.get_center())
         else:
             if self.hover_port is not None:
                 self.hover_port.change_to_basic_color()
@@ -237,6 +240,9 @@ class TempLine(Line):
         if self.target is not None:
             self.target.disconnect_temp(self)
         self.scene().removeItem(self)
+
+    def mousePressEvent(self, event):
+        pass
 
 # -----------------------------------------------------------------------------
 # EOF
