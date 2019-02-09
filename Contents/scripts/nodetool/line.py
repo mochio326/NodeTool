@@ -87,14 +87,25 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.hover_port = None
         self.arrow = LineArrow(self, self.color)
 
-        self.setZValue(-1)
+        self.setZValue(self.DEF_Z_VALUE)
         self.setBrush(QtCore.Qt.NoBrush)
         self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
 
     def mousePressEvent(self, event):
-        self.point_b = event.pos()
-        self.target.disconnect(self)
+        pos = event.scenePos().toPoint()
+        pos_to_a = self.point_a - pos
+        pos_to_b = self.point_b - pos
+        # ベクトルの長さ
+        vector_a_abs = abs(complex(pos_to_a.x(), pos_to_a.y()))
+        vector_b_abs = abs(complex(pos_to_b.x(), pos_to_b.y()))
+
+        if vector_a_abs < vector_b_abs:
+            self.point_a = event.pos()
+            self.source.disconnect(self)
+        else:
+            self.point_b = event.pos()
+            self.target.disconnect(self)
 
     def _get_none_move_port(self):
         if self.source is None:
@@ -109,8 +120,10 @@ class Line(QtWidgets.QGraphicsPathItem):
 
     def delete(self):
         if self.source is not None:
+            self.source.change_to_basic_color()
             self.source.disconnect(self)
         if self.target is not None:
+            self.target.change_to_basic_color()
             self.target.disconnect(self)
         self.scene().removeItem(self)
 
@@ -146,16 +159,17 @@ class Line(QtWidgets.QGraphicsPathItem):
         # ポート以外で離したらラインごと削除
         if not isinstance(item, self.port):
             self.delete()
-            return
+            return False
 
         _none_move_port = self._get_none_move_port()
 
         if not _none_move_port.can_connection(item):
             self.delete()
-            return
+            return False
 
-        _none_move_port.connect(self)
         item.connect(self)
+        return True
+
 
     def update_path(self):
         if self.target is not None and self.target is not None:
@@ -175,18 +189,21 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.setPath(path)
 
     def hoverMoveEvent(self, event):
-        # Do your stuff here.
         pass
 
     def hoverEnterEvent(self, event):
         self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.arrow.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.setPen(self.pen)
+        self.target.change_to_hover_color()
+        self.source.change_to_hover_color()
 
     def hoverLeaveEvent(self, event):
         self.pen.setColor(self.color)
         self.arrow.pen.setColor(self.color)
         self.setPen(self.pen)
+        self.target.change_to_basic_color()
+        self.source.change_to_basic_color()
 
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)

@@ -190,7 +190,6 @@ class Port(QtWidgets.QGraphicsItem):
 
         self.expand_box = PortExpandBox(self)
 
-
         # Brush.
         self.brush = QtGui.QBrush()
         self.brush.setStyle(QtCore.Qt.SolidPattern)
@@ -205,9 +204,6 @@ class Port(QtWidgets.QGraphicsItem):
         # line.Lines.
         self.lines = []
         self.temp_lines = []
-
-    def setY(self, value):
-        super(self.__class__, self).setY(value)
 
     def shape(self):
         path = QtGui.QPainterPath()
@@ -260,7 +256,9 @@ class Port(QtWidgets.QGraphicsItem):
         self.new_line.mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        self.new_line.mouseReleaseEvent(event)
+        _f = self.new_line.mouseReleaseEvent(event)
+        if _f:
+            self.connect(self.new_line)
 
     def parent_port_count(self):
         count = int(0)
@@ -354,6 +352,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.lines.remove(line_)
         if self.node.TYPE == 'Pin':
             self.node.return_initial_state()
+        self.change_to_basic_color()
         self.update()
 
     def disconnect_temp(self, line_):

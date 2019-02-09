@@ -118,6 +118,7 @@ class Node(QtWidgets.QGraphicsItem):
         for _p in self.ports:
             _p.setY(_port_y)
             _port_y = _port_y + _p.height_space
+            _p.update_connect_line_pos()
             _p.deploying_port()
         self.height = _port_y + 5
 
