@@ -4,12 +4,15 @@ from . import line
 
 
 class PortExpandBox(QtWidgets.QGraphicsItem):
+    BOX_SIZE = 10
+
     @property
     def port(self):
         return self.parentItem()
 
     def __init__(self, parent):
         super(PortExpandBox, self).__init__(parent)
+        self.height = self.BOX_SIZE
 
         # Pen.
         self.pen = QtGui.QPen()
@@ -33,49 +36,49 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
             x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
         self.setX(x)
 
-
     def boundingRect(self):
-        rect = QtCore.QRect(0, 0, 10, 40)
+        rect = QtCore.QRect(0, 0, 10, self.height)
         return QtCore.QRectF(rect)
 
     def shape(self):
-        path = QtGui.QPainterPath()
-        path.addPolygon(QtCore.QRectF(0, 0, 10, 10))
+        box = QtGui.QPainterPath()
+        box.addPolygon(QtCore.QRectF(0, 0, self.BOX_SIZE, self.BOX_SIZE))
 
-        path2 = QtGui.QPainterPath()
-        path2.moveTo(0, 5)
-        path2.lineTo(10, 5)
+        box_horizontal = QtGui.QPainterPath()
+        box_horizontal.moveTo(0, self.BOX_SIZE / 2)
+        box_horizontal.lineTo(self.BOX_SIZE, self.BOX_SIZE / 2)
 
-        path.addPath(path2)
+        box.addPath(box_horizontal)
 
         if self.port.type == 'in':
-            children_line_x = 15
+            children_line_x = round(self.BOX_SIZE * 1.5)
         else:
-            children_line_x = -8
+            children_line_x = round(self.BOX_SIZE / 0.75) * -1
 
         if not self.port.children_port_expand:
-            path2 = QtGui.QPainterPath()
-            path2.moveTo(5, 0)
-            path2.lineTo(5, 10)
-            path.addPath(path2)
-
+            box_vertical = QtGui.QPainterPath()
+            box_vertical.moveTo(self.BOX_SIZE / 2, 0)
+            box_vertical.lineTo(self.BOX_SIZE / 2, self.BOX_SIZE)
+            box.addPath(box_vertical)
         else:
             # Children's line
-            y_min = 10
+            y_min = self.BOX_SIZE
             for _p in self.port.children_port:
-                y_max = _p.y() + 5
+                y_max = _p.y() + self.BOX_SIZE / 2
 
                 vertical_line = QtGui.QPainterPath()
-                vertical_line.moveTo(5, y_min)
-                vertical_line.lineTo(5, y_max)
-                path.addPath(vertical_line)
+                vertical_line.moveTo(self.BOX_SIZE / 2, y_min)
+                vertical_line.lineTo(self.BOX_SIZE / 2, y_max)
+                box.addPath(vertical_line)
 
-                vertical_line = QtGui.QPainterPath()
-                vertical_line.moveTo(children_line_x, y_max)
-                vertical_line.lineTo(5, y_max)
-                path.addPath(vertical_line)
+                horizontal_line = QtGui.QPainterPath()
+                horizontal_line.moveTo(children_line_x, y_max)
+                horizontal_line.lineTo(self.BOX_SIZE / 2, y_max)
+                box.addPath(horizontal_line)
 
-        return path
+            self.height = y_max
+
+        return box
 
     def mousePressEvent(self, event):
         self.port.expand()
@@ -108,15 +111,12 @@ class PortLabel(QtWidgets.QGraphicsItem):
         painter.drawText(self.boundingRect(), self.text_align, self.label)
 
     def boundingRect(self):
-        node_item = self.port.node
-        port_item = self.port
-
         font_metrics = QtGui.QFontMetrics(self.font)
         width = font_metrics.width(self.label)
         height = font_metrics.height()
         # ベースラインから下降サイズを無視する
         # こういう場合、height()ではなく、ascent()を使ってもOK!
-        height = height - font_metrics.descent()
+        # height = height - font_metrics.descent()
 
         offset_parent = self.port.parent_port_count() * 20
         if len(self.port.children_port) > 0:
@@ -126,10 +126,10 @@ class PortLabel(QtWidgets.QGraphicsItem):
 
         if self.port.type == 'in':
             self.text_align = QtCore.Qt.AlignLeft
-            label_x = port_item.PORT_SIZE + 2 + offset_parent + offset_child
+            label_x = self.port.PORT_SIZE + 2 + offset_parent + offset_child
         else:
             self.text_align = QtCore.Qt.AlignRight
-            label_x = node_item.width - width - port_item.PORT_SIZE - offset_parent - offset_child
+            label_x = self.port.node.width - width - self.port.PORT_SIZE - offset_parent - offset_child
 
         return QtCore.QRect(label_x, 0 - self.text_size / 2, width, height)
 
