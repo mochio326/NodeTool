@@ -249,7 +249,8 @@ class Port(QtWidgets.QGraphicsItem):
             point_b = self.get_center()
 
         self.new_line = line.Line(point_a, point_b, self.color)
-        self.scene().addItem(self.new_line)
+        #self.scene().addItem(self.new_line)
+        self.scene().views()[0].add_item(self.new_line)
         self.connect(self.new_line, True)
 
     def mouseMoveEvent(self, event):
@@ -306,7 +307,7 @@ class Port(QtWidgets.QGraphicsItem):
             point_a = _source.get_center()
             point_b = _target.get_center()
             _temp_line = line.TempLine(point_a, point_b)
-            self.scene().addItem(_temp_line)
+            self.scene().views()[0].add_item(_temp_line)
             _source.connect_temp(_temp_line)
             _target.connect_temp(_temp_line)
 

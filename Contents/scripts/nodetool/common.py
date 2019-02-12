@@ -35,7 +35,7 @@ def create_node_for_xml(xml_file=''):
         p = n.add_port(_p.attrib['Type'], getattr(port_color, _p.attrib['ValueType']), _p.attrib['ValueType'],
                    _p.attrib['Label'])
 
-    return n, p
+    return n
 
 # -----------------------------------------------------------------------------
 # EOF

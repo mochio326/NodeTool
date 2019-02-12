@@ -162,7 +162,8 @@ class Node(QtWidgets.QGraphicsItem):
         for _p in self.ports:
             for _l in _p.lines:
                 _l.delete()
-        self.scene().removeItem(self)
+        self.scene().views().remove_item(self)
+
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()

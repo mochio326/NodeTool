@@ -92,25 +92,20 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
 
-    def mousePressEvent(self, event):
-        pos = event.scenePos().toPoint()
-        pos_to_a = self.point_a - pos
-        pos_to_b = self.point_b - pos
-        # ベクトルの長さ
-        vector_a_abs = abs(complex(pos_to_a.x(), pos_to_a.y()))
-        vector_b_abs = abs(complex(pos_to_b.x(), pos_to_b.y()))
-
-        if vector_a_abs < vector_b_abs:
-            self.point_a = event.pos()
-            self.source.disconnect(self)
-        else:
-            self.point_b = event.pos()
-            self.target.disconnect(self)
-
     def _get_none_move_port(self):
         if self.source is None:
             return self.target
         return self.source
+
+    def _can_edit(self):
+        #  どちらかのポートが非表示なとき編集できると混乱するので不可
+        if self.source is not None:
+            if not self.source.isVisible():
+                return False
+        if self.target is not None:
+            if not self.target.isVisible():
+                return False
+        return True
 
     def update_moving_point(self, pos):
         if self.source is None:
@@ -125,9 +120,31 @@ class Line(QtWidgets.QGraphicsPathItem):
         if self.target is not None:
             self.target.change_to_basic_color()
             self.target.disconnect(self)
-        self.scene().removeItem(self)
+        self.scene().views()[0].remove_item(self)
+
+    def mousePressEvent(self, event):
+        #  どちらかのポートが非表示なとき編集できると混乱するので不可
+        if not self.source.isVisible() or not self.target.isVisible():
+            return
+
+        pos = event.scenePos().toPoint()
+        pos_to_a = self.point_a - pos
+        pos_to_b = self.point_b - pos
+        # ベクトルの長さ
+        vector_a_abs = abs(complex(pos_to_a.x(), pos_to_a.y()))
+        vector_b_abs = abs(complex(pos_to_b.x(), pos_to_b.y()))
+
+        if vector_a_abs < vector_b_abs:
+            self.point_a = event.pos()
+            self.source.disconnect(self)
+        else:
+            self.point_b = event.pos()
+            self.target.disconnect(self)
 
     def mouseMoveEvent(self, event):
+        if not self._can_edit():
+            return
+
         # 一度ラインを後ろにもっていかないとライン自体をitemとして取得してしまう
         self.setZValue(self.DEF_Z_VALUE)
 
@@ -152,6 +169,9 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.setZValue(100)
 
     def mouseReleaseEvent(self, event):
+        if not self._can_edit():
+            return
+
         self.setZValue(self.DEF_Z_VALUE)
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
@@ -169,7 +189,6 @@ class Line(QtWidgets.QGraphicsPathItem):
 
         item.connect(self)
         return True
-
 
     def update_path(self):
         if self.target is not None and self.target is not None:
@@ -192,6 +211,9 @@ class Line(QtWidgets.QGraphicsPathItem):
         pass
 
     def hoverEnterEvent(self, event):
+        if not self._can_edit():
+            return
+
         self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.arrow.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.setPen(self.pen)
@@ -256,7 +278,7 @@ class TempLine(Line):
             self.source.disconnect_temp(self)
         if self.target is not None:
             self.target.disconnect_temp(self)
-        self.scene().removeItem(self)
+        self.scene().views()[0].remove_item(self)
 
     def mousePressEvent(self, event):
         pass

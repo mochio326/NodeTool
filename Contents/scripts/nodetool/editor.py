@@ -43,7 +43,9 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
+
         n = Node(name='port_test', label='port test')
+
         p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
         Port(p, color=QtCore.Qt.green, value_type='Int', label='KKK')
         Port(p, color=QtCore.Qt.green, value_type='Int', label='LLL')
@@ -60,15 +62,12 @@ class SideBar(QtWidgets.QFrame):
         Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='EEE')
         Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='FFF')
         Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='GGG')
-
         p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
-
-
         window.view.add_item_on_center(n)
 
     def clickedAddBoxButton2(self):
         window = self.window()
-        box, p = common.create_node_for_xml('test2')
+        box = common.create_node_for_xml('test2')
         window.view.add_item_on_center(box)
 
     def clickedAddPinButton(self):

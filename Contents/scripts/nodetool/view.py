@@ -19,6 +19,7 @@ class View(QtWidgets.QGraphicsView):
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.SmartViewportUpdate)
         self.drag = False
         self._clipboard = None
+        self.add_items = []
 
     def drawBackground(self, painter, rect):
         scene_height = self.sceneRect().height()
@@ -127,9 +128,17 @@ class View(QtWidgets.QGraphicsView):
             return
 
     def add_item_on_center(self, widget):
-        self.scene().addItem(widget)
+        self.add_item(widget)
         _pos = self.mapToScene(self.width() / 2, self.height() / 2)
         widget.setPos(_pos)
+
+    def add_item(self, widget):
+        self.add_items.append(widget)
+        self.scene().addItem(widget)
+
+    def remove_item(self, widget):
+        self.add_items.remove(widget)
+        self.scene().removeItem(widget)
 
     def _delete(self):
         for _n in self.scene().selectedItems():
