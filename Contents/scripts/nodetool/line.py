@@ -70,10 +70,15 @@ class LineArrow(QtWidgets.QGraphicsItem):
 class Line(QtWidgets.QGraphicsPathItem):
     DEF_Z_VALUE = 0.0
 
+    @property
+    def _tooltip(self):
+        if self.source is None or self.target is None:
+            return ''
+        return '{}.{} -> {}.{}'.format(self.source.node.name, self.source.name, self.target.node.name, self.target.name)
+
     def __init__(self, point_a, point_b, color):
         from .port import Port
         self.port = Port
-
         super(Line, self).__init__()
         self.color = color
         self._point_a = point_a
@@ -211,9 +216,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         pass
 
     def hoverEnterEvent(self, event):
-        if not self._can_edit():
-            return
-
+        self.setToolTip(self._tooltip)
         self.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.arrow.pen.setColor(QtGui.QColor(255, 200, 200, 255))
         self.setPen(self.pen)

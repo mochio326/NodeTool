@@ -163,7 +163,7 @@ class Port(QtWidgets.QGraphicsItem):
             h = h + _p.height_space
         return h
 
-    def __init__(self, parent, port_type=None, color=None, value_type=None, label=None):
+    def __init__(self, parent, port_type=None, color=None, value_type=None, label=''):
         super(Port, self).__init__(parent)
         self.setAcceptHoverEvents(True)
         self.color = color
@@ -172,6 +172,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.type = port_type
         self.new_line = None
         self.children_port_expand = False
+        self.name = label
 
         if isinstance(parent, Port):
             rect_x = parent.rect.x()
