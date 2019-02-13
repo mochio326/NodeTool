@@ -43,27 +43,8 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
-
-        n = Node(name='port_test', label='port test')
-
-        p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
-        Port(p, color=QtCore.Qt.green, value_type='Int', label='KKK')
-        Port(p, color=QtCore.Qt.green, value_type='Int', label='LLL')
-
-        p = n.add_port('out', QtCore.Qt.red, 'Int', 'p_out')
-        p1 = Port(p, color=QtCore.Qt.green, value_type='Int', label='AA')
-        p2 = Port(p, color=QtCore.Qt.green, value_type='Int', label='BBB')
-        p3 = Port(p, color=QtCore.Qt.green, value_type='Int', label='BBB')
-        Port(p2, color=QtCore.Qt.yellow, value_type='Int', label='CC')
-        Port(p2, color=QtCore.Qt.yellow, value_type='Int', label='DDD')
-        Port(p1, color=QtCore.Qt.darkCyan, value_type='Int', label='EEE')
-        Port(p1, color=QtCore.Qt.darkCyan, value_type='Int', label='FFF')
-        Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='GGG')
-        Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='EEE')
-        Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='FFF')
-        Port(p3, color=QtCore.Qt.darkCyan, value_type='Int', label='GGG')
-        p = n.add_port('in', QtCore.Qt.red, 'Int', 'p_in')
-        window.view.add_item_on_center(n)
+        box = common.create_node_for_xml('hogera')
+        window.view.add_item_on_center(box)
 
     def clickedAddBoxButton2(self):
         window = self.window()
