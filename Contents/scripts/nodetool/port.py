@@ -28,25 +28,26 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
         painter.setPen(self.pen)
         painter.drawPath(self.shape())
 
-        offset_parent = self.port.parent_port_count() * 20
-
-        if self.port.type == 'in':
-            x = (self.port.PORT_SIZE / 2) + offset_parent + 3
-        else:
-            x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
-        self.setX(x)
 
     def boundingRect(self):
         rect = QtCore.QRect(0, 0, 10, self.height)
         return QtCore.QRectF(rect)
 
     def shape(self):
+        offset_parent = self.port.parent_port_count() * 20
+
+        if self.port.type == 'in':
+            x = (self.port.PORT_SIZE / 2) + offset_parent + 3
+        else:
+            x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
+        # self.setX(x)
+
         box = QtGui.QPainterPath()
-        box.addPolygon(QtCore.QRectF(0, 0, self.BOX_SIZE, self.BOX_SIZE))
+        box.addPolygon(QtCore.QRectF(x, 0, self.BOX_SIZE, self.BOX_SIZE))
 
         box_horizontal = QtGui.QPainterPath()
-        box_horizontal.moveTo(0, self.BOX_SIZE / 2)
-        box_horizontal.lineTo(self.BOX_SIZE, self.BOX_SIZE / 2)
+        box_horizontal.moveTo(x, self.BOX_SIZE / 2)
+        box_horizontal.lineTo(self.BOX_SIZE + x, self.BOX_SIZE / 2)
 
         box.addPath(box_horizontal)
 
@@ -54,11 +55,12 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
             children_line_x = round(self.BOX_SIZE * 1.5)
         else:
             children_line_x = round(self.BOX_SIZE / 0.75) * -1
+        children_line_x = children_line_x + x
 
         if not self.port.children_port_expand:
             box_vertical = QtGui.QPainterPath()
-            box_vertical.moveTo(self.BOX_SIZE / 2, 0)
-            box_vertical.lineTo(self.BOX_SIZE / 2, self.BOX_SIZE)
+            box_vertical.moveTo(self.BOX_SIZE / 2 + x, 0)
+            box_vertical.lineTo(self.BOX_SIZE / 2 + x, self.BOX_SIZE)
             box.addPath(box_vertical)
         else:
             # Children's line
@@ -67,13 +69,13 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
                 y_max = _p.y() + self.BOX_SIZE / 2
 
                 vertical_line = QtGui.QPainterPath()
-                vertical_line.moveTo(self.BOX_SIZE / 2, y_min)
-                vertical_line.lineTo(self.BOX_SIZE / 2, y_max)
+                vertical_line.moveTo(self.BOX_SIZE / 2 + x, y_min)
+                vertical_line.lineTo(self.BOX_SIZE / 2 + x, y_max)
                 box.addPath(vertical_line)
 
                 horizontal_line = QtGui.QPainterPath()
                 horizontal_line.moveTo(children_line_x, y_max)
-                horizontal_line.lineTo(self.BOX_SIZE / 2, y_max)
+                horizontal_line.lineTo(self.BOX_SIZE / 2 + x, y_max)
                 box.addPath(horizontal_line)
 
             self.height = y_max
@@ -279,6 +281,12 @@ class Port(QtWidgets.QGraphicsItem):
         while isinstance(_p, Port):
             yield _p
             _p = _p.parentItem()
+
+    def children_ports_all_iter(self):
+        for _p in  self.children_port:
+            yield _p
+            for _pp in _p.children_ports_all_iter():
+                yield _pp
 
     def get_visible_parent_port(self):
         for _p in self._parent_port_iter():

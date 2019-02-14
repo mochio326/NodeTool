@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
 from . import port
-
+import uuid
 
 class NodeLabel(QtWidgets.QGraphicsItem):
 
@@ -61,6 +61,7 @@ class Node(QtWidgets.QGraphicsItem):
 
     def __init__(self, name='', width=140, height=60, label='node'):
         super(Node, self).__init__()
+        self.id = str(uuid.uuid4())
         self.name = name
         self.setZValue(self.DEF_Z_VALUE)
         self.width = width
@@ -162,8 +163,27 @@ class Node(QtWidgets.QGraphicsItem):
         for _p in self.ports:
             for _l in _p.lines:
                 _l.delete()
-        self.scene().views().remove_item(self)
+        self.scene().views()[0].remove_item(self)
 
+    def children_ports_all_iter(self):
+        for _p in self.ports:
+            yield _p
+            for _pp in _p.children_ports_all_iter():
+                yield _pp
+
+    def save_data(self):
+        data = {}
+        data['id'] = self.id
+        data['name'] = self.name
+        data['z_value'] = self.zValue()
+        data['x'] = self.x()
+        data['y'] = self.y()
+        data['ports'] = {}
+        for _p in self.ports:
+            data['ports'][_p.name] = _p.children_port_expand
+            for _pp in _p.children_ports_all_iter():
+                data['ports'][_pp.name] = _pp.children_port_expand
+        return data
 
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()
@@ -173,16 +193,18 @@ class Node(QtWidgets.QGraphicsItem):
         selectedAction = menu.exec_(event.screenPos())
 
         if selectedAction == debugConnections:
-            print 'input_port'
-            for idx, line in enumerate(self.input_port.lines):
-                print '  Line {0}'.format(idx)
-                print '    point_a: {0}'.format(line.point_a)
-                print '    point_b: {0}'.format(line.point_b)
-            print 'output_port'
-            for idx, line in enumerate(self.output_port.lines):
-                print '  Line {0}'.format(idx)
-                print '    point_a: {0}'.format(line.point_a)
-                print '    point_b: {0}'.format(line.point_b)
+            self.save_data()
+
+            # print 'input_port'
+            # for idx, line in enumerate(self.input_port.lines):
+            #     print '  Line {0}'.format(idx)
+            #     print '    point_a: {0}'.format(line.point_a)
+            #     print '    point_b: {0}'.format(line.point_b)
+            # print 'output_port'
+            # for idx, line in enumerate(self.output_port.lines):
+            #     print '  Line {0}'.format(idx)
+            #     print '    point_a: {0}'.format(line.point_a)
+            #     print '    point_b: {0}'.format(line.point_b)
 
 # -----------------------------------------------------------------------------
 # EOF

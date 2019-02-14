@@ -1,13 +1,15 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Node Group='test' Label="hogehogera">
     <Port Type="in" Label="hogein" ValueType="Int">
-            <Port Label="AAA" ValueType="Int"/>
-            <Port Label="BBB" ValueType="Int"/>
+            <Port Label="InAAA" ValueType="Int"/>
+            <Port Label="InBBB" ValueType="Int"/>
     </Port>
     <Port Type="out" Label="hogeout" ValueType="Int" >
-            <Port Label="AAA" ValueType="Int" >
-                    <Port Label="AAA" ValueType="Int"/>
-                    <Port Label="BBB" ValueType="Int"/>
+            <Port Label="OutAAA" ValueType="Int" >
+                <Port Label="OutAAA2" ValueType="Int">
+                    <Port Label="OutAAA3" ValueType="Int"/>
+                </Port>>
+                    <Port Label="OutBBB2" ValueType="Int"/>
             </Port>
             <Port Label="BBB" ValueType="Int"/>
     </Port>

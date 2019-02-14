@@ -133,12 +133,18 @@ class View(QtWidgets.QGraphicsView):
         widget.setPos(_pos)
 
     def add_item(self, widget):
-        self.add_items.append(widget)
-        self.scene().addItem(widget)
+        if not isinstance(widget, list):
+            widget = [widget]
+        for _w in widget:
+            self.add_items.append(_w)
+            self.scene().addItem(_w)
 
     def remove_item(self, widget):
-        self.add_items.remove(widget)
-        self.scene().removeItem(widget)
+        if not isinstance(widget, list):
+            widget = [widget]
+        for _w in widget:
+            self.add_items.remove(_w)
+            self.scene().removeItem(_w)
 
     def _delete(self):
         for _n in self.scene().selectedItems():
@@ -147,14 +153,19 @@ class View(QtWidgets.QGraphicsView):
     def _copy(self):
         self._clipboard = []
         for _n in self.scene().selectedItems():
-            self._clipboard.append(_n.name)
+            self._clipboard.append(_n.save_data())
 
     def _paste(self):
         if self._clipboard is None:
             return
         for _c in self._clipboard:
-            box = common.create_node_for_xml(_c)
+            box = common.create_node_for_xml(_c['name'])
             self.add_item_on_center(box)
+            for _p in box.children_ports_all_iter():
+                _p.children_port_expand = _c['ports'][_p.name]
+            box.deploying_port()
+
+        self.scene().update()
 
 # -----------------------------------------------------------------------------
 # EOF
