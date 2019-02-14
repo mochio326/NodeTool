@@ -4,5 +4,11 @@
             <Port Label="AAA" ValueType="Int"/>
             <Port Label="BBB" ValueType="Int"/>
     </Port>
-    <Port Type="out" Label="hogeout" ValueType="Int" />
+    <Port Type="out" Label="hogeout" ValueType="Int" >
+            <Port Label="AAA" ValueType="Int" >
+                    <Port Label="AAA" ValueType="Int"/>
+                    <Port Label="BBB" ValueType="Int"/>
+            </Port>
+            <Port Label="BBB" ValueType="Int"/>
+    </Port>
 </Node>

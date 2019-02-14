@@ -33,6 +33,7 @@ def create_node_for_xml(xml_file=''):
     n = node.Node(name=xml_file, label=tree._root.attrib['Label'])
     p = tree.findall('Port')
     create_ports_for_xml(p, n)
+    n.deploying_port()
     return n
 
 
@@ -43,13 +44,10 @@ def create_ports_for_xml(ports_xml, parent):
             pp = parent.add_port(label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
                                  color=getattr(port_color, _p.attrib.get('ValueType')),
                                  value_type=_p.attrib.get('ValueType'))
-
         else:
-
             pp = port.Port(parent=parent, label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
                            color=getattr(port_color, _p.attrib.get('ValueType')), value_type=_p.attrib.get('ValueType'))
         _p_find = _p.findall('Port')
-        print _p_find
         create_ports_for_xml(_p_find, pp)
 
 # -----------------------------------------------------------------------------
