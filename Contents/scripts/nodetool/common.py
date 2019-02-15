@@ -50,6 +50,28 @@ def create_ports_for_xml(ports_xml, parent):
         _p_find = _p.findall('Port')
         create_ports_for_xml(_p_find, pp)
 
+def get_node_save_data(node):
+    data = {}
+    data['id'] = node.id
+    data['name'] = node.name
+    data['z_value'] = node.zValue()
+    data['x'] = node.x()
+    data['y'] = node.y()
+    data['ports'] = {}
+    for _p in node.ports:
+        data['ports'][_p.name] = _p.children_port_expand
+        for _pp in _p.children_ports_all_iter():
+            data['ports'][_pp.name] = _pp.children_port_expand
+    return data
+
+def load_node_data(node, save_data, ports_only=False):
+    for _p in node.children_ports_all_iter():
+        _p.children_port_expand = save_data['ports'][_p.name]
+    node.deploying_port()
+    if ports_only:
+        return
+
+
 # -----------------------------------------------------------------------------
 # EOF
 # -----------------------------------------------------------------------------

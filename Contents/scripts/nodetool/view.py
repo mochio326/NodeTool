@@ -153,7 +153,7 @@ class View(QtWidgets.QGraphicsView):
     def _copy(self):
         self._clipboard = []
         for _n in self.scene().selectedItems():
-            self._clipboard.append(_n.save_data())
+            self._clipboard.append(common.get_node_save_data(_n))
 
     def _paste(self):
         if self._clipboard is None:
@@ -161,9 +161,7 @@ class View(QtWidgets.QGraphicsView):
         for _c in self._clipboard:
             box = common.create_node_for_xml(_c['name'])
             self.add_item_on_center(box)
-            for _p in box.children_ports_all_iter():
-                _p.children_port_expand = _c['ports'][_p.name]
-            box.deploying_port()
+            common.load_node_data(box, _c, True)
 
         self.scene().update()
 

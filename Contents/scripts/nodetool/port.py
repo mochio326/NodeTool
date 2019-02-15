@@ -37,17 +37,16 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
         offset_parent = self.port.parent_port_count() * 20
 
         if self.port.type == 'in':
-            x = (self.port.PORT_SIZE / 2) + offset_parent + 3
+            base_x = (self.port.PORT_SIZE / 2) + offset_parent + 3
         else:
-            x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
-        # self.setX(x)
+            base_x = self.port.node.width - self.port.PORT_SIZE - offset_parent - 8
 
         box = QtGui.QPainterPath()
-        box.addPolygon(QtCore.QRectF(x, 0, self.BOX_SIZE, self.BOX_SIZE))
+        box.addPolygon(QtCore.QRectF(base_x, 0, self.BOX_SIZE, self.BOX_SIZE))
 
         box_horizontal = QtGui.QPainterPath()
-        box_horizontal.moveTo(x, self.BOX_SIZE / 2)
-        box_horizontal.lineTo(self.BOX_SIZE + x, self.BOX_SIZE / 2)
+        box_horizontal.moveTo(base_x, self.BOX_SIZE / 2)
+        box_horizontal.lineTo(self.BOX_SIZE + base_x, self.BOX_SIZE / 2)
 
         box.addPath(box_horizontal)
 
@@ -55,12 +54,12 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
             children_line_x = round(self.BOX_SIZE * 1.5)
         else:
             children_line_x = round(self.BOX_SIZE / 0.75) * -1
-        children_line_x = children_line_x + x
+        children_line_x = children_line_x + base_x
 
         if not self.port.children_port_expand:
             box_vertical = QtGui.QPainterPath()
-            box_vertical.moveTo(self.BOX_SIZE / 2 + x, 0)
-            box_vertical.lineTo(self.BOX_SIZE / 2 + x, self.BOX_SIZE)
+            box_vertical.moveTo(self.BOX_SIZE / 2 + base_x, 0)
+            box_vertical.lineTo(self.BOX_SIZE / 2 + base_x, self.BOX_SIZE)
             box.addPath(box_vertical)
         else:
             # Children's line
@@ -69,13 +68,13 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
                 y_max = _p.y() + self.BOX_SIZE / 2
 
                 vertical_line = QtGui.QPainterPath()
-                vertical_line.moveTo(self.BOX_SIZE / 2 + x, y_min)
-                vertical_line.lineTo(self.BOX_SIZE / 2 + x, y_max)
+                vertical_line.moveTo(self.BOX_SIZE / 2 + base_x, y_min)
+                vertical_line.lineTo(self.BOX_SIZE / 2 + base_x, y_max)
                 box.addPath(vertical_line)
 
                 horizontal_line = QtGui.QPainterPath()
                 horizontal_line.moveTo(children_line_x, y_max)
-                horizontal_line.lineTo(self.BOX_SIZE / 2 + x, y_max)
+                horizontal_line.lineTo(self.BOX_SIZE / 2 + base_x, y_max)
                 box.addPath(horizontal_line)
 
             self.height = y_max

@@ -137,6 +137,7 @@ class Node(QtWidgets.QGraphicsItem):
         for _n in self.scene().selectedItems():
             for _p in _n.ports:
                 _p.update_connect_line_pos()
+        self.scene().update()
 
     def get_scene_nodes(self):
         # シーン内のノードのみ取得
@@ -171,20 +172,6 @@ class Node(QtWidgets.QGraphicsItem):
             for _pp in _p.children_ports_all_iter():
                 yield _pp
 
-    def save_data(self):
-        data = {}
-        data['id'] = self.id
-        data['name'] = self.name
-        data['z_value'] = self.zValue()
-        data['x'] = self.x()
-        data['y'] = self.y()
-        data['ports'] = {}
-        for _p in self.ports:
-            data['ports'][_p.name] = _p.children_port_expand
-            for _pp in _p.children_ports_all_iter():
-                data['ports'][_pp.name] = _pp.children_port_expand
-        return data
-
     def contextMenuEvent(self, event):
         menu = QtWidgets.QMenu()
         make = menu.addAction('make')
@@ -193,8 +180,7 @@ class Node(QtWidgets.QGraphicsItem):
         selectedAction = menu.exec_(event.screenPos())
 
         if selectedAction == debugConnections:
-            self.save_data()
-
+            pass
             # print 'input_port'
             # for idx, line in enumerate(self.input_port.lines):
             #     print '  Line {0}'.format(idx)
