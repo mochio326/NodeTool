@@ -51,6 +51,14 @@ class Node(QtWidgets.QGraphicsItem):
     TYPE = 'Node'
     DEF_Z_VALUE = 0.1
 
+    @classmethod
+    def scene_nodes_iter(cls, scene):
+        # シーン内のノードのみ取得
+        for _i in scene.items():
+            if not isinstance(_i, cls):
+                continue
+            yield _i
+
     @property
     def rect(self):
         return QtCore.QRect(0, 0, self.width, self.height)
@@ -139,17 +147,10 @@ class Node(QtWidgets.QGraphicsItem):
                 _p.update_connect_line_pos()
         self.scene().update()
 
-    def get_scene_nodes(self):
-        # シーン内のノードのみ取得
-        for _i in self.scene().items():
-            if not isinstance(_i, self.__class__):
-                continue
-            yield _i
-
     def mouseReleaseEvent(self, event):
         # ノードを現在の描画順を維持したまま数値を整頓
         node_z_list = []
-        for _n in self.get_scene_nodes():
+        for _n in self.scene_nodes_iter(self.scene()):
             node_z_list.append([_n.zValue(), _n])
         node_z_list = sorted(node_z_list, key=lambda x:x[0])
         for _i, _n in enumerate(node_z_list):

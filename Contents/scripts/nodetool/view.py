@@ -101,6 +101,18 @@ class View(QtWidgets.QGraphicsView):
             self.setCursor(QtCore.Qt.ArrowCursor)
         super(View, self).mouseReleaseEvent(event)
 
+        if event.button() == QtCore.Qt.RightButton:
+            menu = QtWidgets.QMenu()
+            save = menu.addAction('save')
+            load = menu.addAction('load')
+            selectedAction = menu.exec_(event.globalPos())
+
+            if selectedAction == save:
+                common.scene_save(self)
+            if selectedAction == load:
+                common.scene_load(self)
+
+
     def keyPressEvent(self, event):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
@@ -145,6 +157,10 @@ class View(QtWidgets.QGraphicsView):
         for _w in widget:
             self.add_items.remove(_w)
             self.scene().removeItem(_w)
+
+    def clear(self):
+        self.scene().clear()
+        self.add_items = []
 
     def _delete(self):
         for _n in self.scene().selectedItems():
