@@ -134,6 +134,15 @@ class View(QtWidgets.QGraphicsView):
                 print 'redo'
                 # self._redo()
                 return
+        if event.key() == QtCore.Qt.Key_A:
+            print 'a'
+            _bbox = self.scene().itemsBoundingRect()
+            print _bbox.x(), _bbox.y()
+            _pos = self.mapToScene(_bbox.x(), _bbox.y() )
+
+            self.translate(_pos.x(), _pos.y())
+
+            return
 
         if event.key() == QtCore.Qt.Key_Delete:
             self._delete()
@@ -169,7 +178,11 @@ class View(QtWidgets.QGraphicsView):
     def _copy(self):
         self._clipboard = []
         for _n in self.scene().selectedItems():
-            self._clipboard.append(common.get_node_save_data(_n))
+            self._clipboard.append(_n.save_data)
+        selected_nodes_id = [_n.id for _n in self.scene().selectedItems()]
+        for _i in self.scene().items():
+            if isinstance(_i, ):
+                aaa
 
     def _paste(self):
         if self._clipboard is None:

@@ -8,18 +8,18 @@ class LineArrow(QtWidgets.QGraphicsItem):
         super(LineArrow, self).__init__(parent)
         self.triangle = QtGui.QPolygon()
         self.color = color
-
         # Pen.
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(0)
-        self.pen.setColor(self.color)
 
     @property
     def line(self):
         return self.parentItem()
 
     def paint(self, painter, option, widget):
+        self.color = self.parentItem().color
+        self.pen.setColor(self.color)
         painter.setPen(self.pen)
         path = QtGui.QPainterPath()
         dx = self.line.point_b.x() - self.line.point_a.x()
@@ -70,6 +70,25 @@ class LineArrow(QtWidgets.QGraphicsItem):
 class Line(QtWidgets.QGraphicsPathItem):
     DEF_Z_VALUE = 0.0
 
+    @classmethod
+    def scene_lines_iter(cls, scene):
+        # シーン内のノードのみ取得
+        for _i in scene.items():
+            if type(_i) != cls:
+                continue
+            yield _i
+
+    @property
+    def save_data(self):
+        data = {}
+        data['sauce'] = {}
+        data['sauce']['node_id'] = self.source.node.id
+        data['sauce']['port_name'] = self.source.name
+        data['target'] = {}
+        data['target']['node_id'] = self.target.node.id
+        data['target']['port_name'] = self.target.name
+        return data
+
     @property
     def _tooltip(self):
         if self.source is None or self.target is None:
@@ -88,7 +107,6 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(1)
-        self.pen.setColor(self.color)
         self.hover_port = None
         self.arrow = LineArrow(self, self.color)
 
@@ -231,6 +249,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.source.change_to_basic_color()
 
     def paint(self, painter, option, widget):
+        self.pen.setColor(self.color)
         painter.setPen(self.pen)
         painter.drawPath(self.path())
         self.arrow.paint(painter, option, widget)

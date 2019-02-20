@@ -2,6 +2,7 @@
 from .vendor.Qt import QtCore, QtGui, QtWidgets
 from . import node
 from . import port
+from . import line
 import xml.etree.ElementTree as ET
 import glob
 import os
@@ -56,21 +57,6 @@ def create_ports_for_xml(ports_xml, parent):
         _p_find = _p.findall('Port')
         create_ports_for_xml(_p_find, pp)
 
-def get_node_save_data(node):
-    data = {}
-    data['id'] = node.id
-    data['name'] = node.name
-    data['z_value'] = node.zValue()
-    data['x'] = node.x()
-    data['y'] = node.y()
-    data['ports'] = {}
-    for _p in node.ports:
-        data['ports'][_p.name] = _p.children_port_expand
-        for _pp in _p.children_ports_all_iter():
-            data['ports'][_pp.name] = _pp.children_port_expand
-    return data
-
-
 def load_node_data(node, save_data, ports_only=False):
     for _p in node.children_ports_all_iter():
         _p.children_port_expand = save_data['ports'][_p.name]
@@ -87,19 +73,47 @@ def scene_save(view):
     save_data = {}
     nodes = []
     for _n in node.Node.scene_nodes_iter(view):
-        nodes.append(get_node_save_data(_n))
+        nodes.append(_n.save_data)
     save_data['node'] = nodes
+
+    lines = []
+    for _l in line.Line.scene_lines_iter(view):
+        lines.append(_l.save_data)
+    save_data['line'] = lines
+
     not_escape_json_dump(r'c:\temp\node_tool.json', save_data)
 
 
 def scene_load(view):
     data = not_escape_json_load(r'c:\temp\node_tool.json')
     view.clear()
+
+    nodes = []
     for _n in data['node']:
         node = create_node_for_xml(_n['name'])
         view.add_item_on_center(node)
         load_node_data(node, _n, False)
+        nodes.append(node)
 
+    for _l in data['line']:
+        line_connect_for_save_data(_l, view)
+
+    for _n in nodes:
+        for _p in _n.children_ports_all_iter():
+            _p.create_temp_line()
+
+
+def line_connect_for_save_data(line_data, view):
+    new_line = line.Line(QtCore.QPointF(0,0), QtCore.QPointF(0,0), None)
+    for _n in node.Node.scene_nodes_iter(view):
+        if line_data['sauce']['node_id'] == _n.id:
+            sauce = _n.port[line_data['sauce']['port_name']]
+        if line_data['target']['node_id'] == _n.id:
+            target = _n.port[line_data['target']['port_name']]
+    sauce.connect(new_line)
+    target.connect(new_line)
+    new_line.color = target.color
+    view.add_item(new_line)
 
 def not_escape_json_dump(path, data):
     # http://qiita.com/tadokoro/items/131268c9a0fd1cf85bf4
@@ -115,6 +129,8 @@ def not_escape_json_load(path):
     with open(path) as fh:
         data = json.loads(fh.read(), "utf-8")
     return data
+
+
 
 # -----------------------------------------------------------------------------
 # EOF

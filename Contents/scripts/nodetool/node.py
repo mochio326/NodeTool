@@ -64,8 +64,27 @@ class Node(QtWidgets.QGraphicsItem):
         return QtCore.QRect(0, 0, self.width, self.height)
 
     @property
+    def save_data(self):
+        data = {}
+        data['id'] = self.id
+        data['name'] = self.name
+        data['z_value'] = self.zValue()
+        data['x'] = self.x()
+        data['y'] = self.y()
+        data['ports'] = {}
+        for _p in self.ports:
+            data['ports'][_p.name] = _p.children_port_expand
+            for _pp in _p.children_ports_all_iter():
+                data['ports'][_pp.name] = _pp.children_port_expand
+        return data
+
+    @property
     def ports(self):
         return [_item for _item in self.childItems() if isinstance(_item, port.Port)]
+
+    @property
+    def port(self):
+        return {str(_p.name):_p for _p in self.children_ports_all_iter()}
 
     def __init__(self, name='', width=140, height=60, label='node'):
         super(Node, self).__init__()
