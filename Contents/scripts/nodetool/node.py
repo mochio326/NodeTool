@@ -181,9 +181,8 @@ class Node(QtWidgets.QGraphicsItem):
         super(Node, self).mouseReleaseEvent(event)
 
     def delete(self):
-        for _p in self.ports:
-            for _l in _p.lines:
-                _l.delete()
+        for _p in self.children_ports_all_iter():
+            _p.delete_all_line()
         self.scene().views()[0].remove_item(self)
 
     def children_ports_all_iter(self):

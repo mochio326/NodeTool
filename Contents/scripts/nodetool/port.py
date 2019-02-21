@@ -307,6 +307,12 @@ class Port(QtWidgets.QGraphicsItem):
         for _l in self.temp_lines[::-1]:
             _l.delete()
 
+    def delete_all_line(self):
+        for _l in self.temp_lines[::-1]:
+            _l.delete()
+        for _l in self.lines[::-1]:
+            _l.delete()
+
     def create_temp_line(self):
         hide_lines = self.check_children_lines_hide()
         for _l in hide_lines:
