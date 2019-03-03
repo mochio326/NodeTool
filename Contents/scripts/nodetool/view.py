@@ -177,6 +177,7 @@ class View(QtWidgets.QGraphicsView):
 
     def _copy(self):
         self._clipboard = {}
+        self._clipboard_offset = 0
         selected_nodes = self.scene().selectedItems()
         related_lines = common.get_lines_related_with_node(selected_nodes, self)
         self._clipboard = common.get_save_data(selected_nodes, related_lines)
@@ -184,10 +185,14 @@ class View(QtWidgets.QGraphicsView):
     def _paste(self):
         if self._clipboard is None:
             return
+        self._clipboard_offset = self._clipboard_offset + 1
         common.refresh_all_node_ids_in_scene(self)
         nodes = common.load_save_data(self._clipboard, self)
         self.scene().clearSelection()
         for _n in nodes:
+            _n.setZValue(_n.zValue() + self._clipboard_offset)
+            _n.setX(_n.x() + self._clipboard_offset * 10)
+            _n.setY(_n.y() + self._clipboard_offset * 10)
             _n.setSelected(True)
         self.scene().update()
 
