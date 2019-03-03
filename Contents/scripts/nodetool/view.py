@@ -176,22 +176,19 @@ class View(QtWidgets.QGraphicsView):
             _n.delete()
 
     def _copy(self):
-        self._clipboard = []
-        for _n in self.scene().selectedItems():
-            self._clipboard.append(_n.save_data)
-        selected_nodes_id = [_n.id for _n in self.scene().selectedItems()]
-        for _i in self.scene().items():
-            if isinstance(_i, ):
-                aaa
+        self._clipboard = {}
+        selected_nodes = self.scene().selectedItems()
+        related_lines = common.get_lines_related_with_node(selected_nodes, self)
+        self._clipboard = common.get_save_data(selected_nodes, related_lines)
 
     def _paste(self):
         if self._clipboard is None:
             return
-        for _c in self._clipboard:
-            box = common.create_node_for_xml(_c['name'])
-            self.add_item_on_center(box)
-            common.load_node_data(box, _c, True)
-
+        common.refresh_all_node_ids_in_scene(self)
+        nodes = common.load_save_data(self._clipboard, self)
+        self.scene().clearSelection()
+        for _n in nodes:
+            _n.setSelected(True)
         self.scene().update()
 
 # -----------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import glob
 import os
 import json
 
+
 class PortColor(object):
     Int = QtCore.Qt.red
     Bool = QtCore.Qt.green
@@ -57,6 +58,7 @@ def create_ports_for_xml(ports_xml, parent):
         _p_find = _p.findall('Port')
         create_ports_for_xml(_p_find, pp)
 
+
 def load_node_data(node, save_data, ports_only=False):
     for _p in node.children_ports_all_iter():
         _p.children_port_expand = save_data['ports'][_p.name]
@@ -70,24 +72,20 @@ def load_node_data(node, save_data, ports_only=False):
 
 
 def scene_save(view):
-    save_data = {}
-    nodes = []
-    for _n in node.Node.scene_nodes_iter(view):
-        nodes.append(_n.save_data)
-    save_data['node'] = nodes
-
-    lines = []
-    for _l in line.Line.scene_lines_iter(view):
-        lines.append(_l.save_data)
-    save_data['line'] = lines
-
+    nodes = [_n for _n in node.Node.scene_nodes_iter(view)]
+    lines = [_l for _l in line.Line.scene_lines_iter(view)]
+    save_data = get_save_data(nodes, lines)
     not_escape_json_dump(r'c:\temp\node_tool.json', save_data)
 
 
-def scene_load(view):
-    data = not_escape_json_load(r'c:\temp\node_tool.json')
-    view.clear()
+def get_save_data(nodes, lines):
+    save_data = {}
+    save_data['node'] = [_n.save_data for _n in nodes]
+    save_data['line'] = [_l.save_data for _l in lines]
+    return save_data
 
+
+def load_save_data(data, view):
     nodes = []
     for _n in data['node']:
         node = create_node_for_xml(_n['name'])
@@ -102,18 +100,27 @@ def scene_load(view):
         for _p in _n.children_ports_all_iter():
             _p.create_temp_line()
 
+    return nodes
+
+
+def scene_load(view):
+    data = not_escape_json_load(r'c:\temp\node_tool.json')
+    view.clear()
+    load_save_data(data, view)
+
 
 def line_connect_for_save_data(line_data, view):
-    new_line = line.Line(QtCore.QPointF(0,0), QtCore.QPointF(0,0), None)
+    new_line = line.Line(QtCore.QPointF(0, 0), QtCore.QPointF(0, 0), None)
     for _n in node.Node.scene_nodes_iter(view):
-        if line_data['sauce']['node_id'] == _n.id:
-            sauce = _n.port[line_data['sauce']['port_name']]
+        if line_data['source']['node_id'] == _n.id:
+            source = _n.port[line_data['source']['port_name']]
         if line_data['target']['node_id'] == _n.id:
             target = _n.port[line_data['target']['port_name']]
-    sauce.connect(new_line)
+    source.connect(new_line)
     target.connect(new_line)
     new_line.color = target.color
     view.add_item(new_line)
+
 
 def not_escape_json_dump(path, data):
     # http://qiita.com/tadokoro/items/131268c9a0fd1cf85bf4
@@ -131,6 +138,19 @@ def not_escape_json_load(path):
     return data
 
 
+def get_lines_related_with_node(nodes, view):
+    # 指定ノードに関連するラインをシーン内から取得
+    nodes_id = [_n.id for _n in nodes]
+    related_lines = []
+    for _l in line.Line.scene_lines_iter(view):
+        if _l.source.node.id in nodes_id and  _l.target.node.id in nodes_id:
+            related_lines.append(_l)
+    return related_lines
+
+
+def refresh_all_node_ids_in_scene(view):
+    for _n in node.Node.scene_nodes_iter(view):
+        _n.refresh_id()
 
 # -----------------------------------------------------------------------------
 # EOF

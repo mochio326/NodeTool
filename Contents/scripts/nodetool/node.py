@@ -80,10 +80,12 @@ class Node(QtWidgets.QGraphicsItem):
 
     @property
     def ports(self):
+        # リストでアクセス用
         return [_item for _item in self.childItems() if isinstance(_item, port.Port)]
 
     @property
     def port(self):
+        # 辞書でアクセス用
         return {str(_p.name):_p for _p in self.children_ports_all_iter()}
 
     def __init__(self, name='', width=140, height=60, label='node'):
@@ -118,6 +120,9 @@ class Node(QtWidgets.QGraphicsItem):
             self.port_init_y = 30
         else:
             self.port_init_y = 10
+
+    def refresh_id(self):
+        self.id = str(uuid.uuid4())
 
     def add_port(self, port_type, color, value_type, label=None):
         p = port.Port(self, port_type=port_type, color=color, value_type=value_type, label=label)

@@ -81,9 +81,9 @@ class Line(QtWidgets.QGraphicsPathItem):
     @property
     def save_data(self):
         data = {}
-        data['sauce'] = {}
-        data['sauce']['node_id'] = self.source.node.id
-        data['sauce']['port_name'] = self.source.name
+        data['source'] = {}
+        data['source']['node_id'] = self.source.node.id
+        data['source']['port_name'] = self.source.name
         data['target'] = {}
         data['target']['node_id'] = self.target.node.id
         data['target']['port_name'] = self.target.name
