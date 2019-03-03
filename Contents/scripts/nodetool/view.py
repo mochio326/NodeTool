@@ -87,7 +87,9 @@ class View(QtWidgets.QGraphicsView):
 
     def mouseMoveEvent(self, event):
         if self.drag:
-            delta = (self.mapToScene(event.pos()) - self.mapToScene(self.prev_pos)) * -1.0
+            # 等倍scaleかつ回転してないはずでscale取り出す…
+            new_scale = self.matrix().m11()
+            delta = (self.mapToScene(event.pos()) - self.mapToScene(self.prev_pos)) * -1.0 * new_scale
             center = QtCore.QPoint(self.viewport().width() / 2 + delta.x(), self.viewport().height() / 2 + delta.y())
             new_center = self.mapToScene(center)
             self.centerOn(new_center)
@@ -177,7 +179,7 @@ class View(QtWidgets.QGraphicsView):
 
     def _copy(self):
         self._clipboard = {}
-        self._clipboard_offset = 0
+        self._paste_offset = 0
         selected_nodes = self.scene().selectedItems()
         related_lines = common.get_lines_related_with_node(selected_nodes, self)
         self._clipboard = common.get_save_data(selected_nodes, related_lines)
@@ -185,14 +187,14 @@ class View(QtWidgets.QGraphicsView):
     def _paste(self):
         if self._clipboard is None:
             return
-        self._clipboard_offset = self._clipboard_offset + 1
+        self._paste_offset = self._paste_offset + 1
         common.refresh_all_node_ids_in_scene(self)
         nodes = common.load_save_data(self._clipboard, self)
         self.scene().clearSelection()
         for _n in nodes:
-            _n.setZValue(_n.zValue() + self._clipboard_offset)
-            _n.setX(_n.x() + self._clipboard_offset * 10)
-            _n.setY(_n.y() + self._clipboard_offset * 10)
+            _n.setZValue(_n.zValue() + self._paste_offset)
+            _n.setX(_n.x() + self._paste_offset * 10)
+            _n.setY(_n.y() + self._paste_offset * 10)
             _n.setSelected(True)
         self.scene().update()
 
