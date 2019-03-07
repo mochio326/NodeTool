@@ -143,9 +143,11 @@ class PortLabel(QtWidgets.QGraphicsItem):
         self.port.expand()
 
 
-class Port(QtWidgets.QGraphicsItem):
+class Port(QtWidgets.QGraphicsItem, QtCore.QObject):
     PORT_SIZE = 12
     INTERVAL_SIZE = 25
+
+    expanded = QtCore.Signal()
 
     @property
     def node(self):
@@ -253,7 +255,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.new_line = line.Line(point_a, point_b, self.color)
         #self.scene().addItem(self.new_line)
         self.scene().views()[0].add_item(self.new_line)
-        self.connect(self.new_line, True)
+        self.connect_line(self.new_line, True)
 
     def mouseMoveEvent(self, event):
         self.new_line.mouseMoveEvent(event)
@@ -261,7 +263,7 @@ class Port(QtWidgets.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         _f = self.new_line.mouseReleaseEvent(event)
         if _f:
-            self.connect(self.new_line)
+            self.connect_line(self.new_line)
 
     def parent_port_count(self):
         count = int(0)
@@ -293,12 +295,15 @@ class Port(QtWidgets.QGraphicsItem):
                 return _p
 
     def expand(self):
+        if len(self.children_port) == 0:
+            return
         self.children_port_expand = not self.children_port_expand
         self.delete_temp_line()
         self.node.deploying_port()
         self.create_temp_line()
         self.node.update()
         self.scene().update()
+        self.expanded.emit()
 
     def delete_temp_line(self):
         if not self.children_port_expand:
@@ -322,8 +327,8 @@ class Port(QtWidgets.QGraphicsItem):
             point_b = _target.get_center()
             _temp_line = line.TempLine(point_a, point_b)
             self.scene().views()[0].add_item(_temp_line)
-            _source.connect_temp(_temp_line)
-            _target.connect_temp(_temp_line)
+            _source.connect_temp_line(_temp_line)
+            _target.connect_temp_line(_temp_line)
 
     def check_children_lines_hide(self):
         vis_list = []
@@ -357,7 +362,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.brush.setColor(QtGui.QColor(180, 20, 90, 255))
         self.update()
 
-    def disconnect(self, line_):
+    def disconnect_line(self, line_):
         if line_ not in self.lines:
             return
         if self.type == 'in':
@@ -370,7 +375,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.change_to_basic_color()
         self.update()
 
-    def disconnect_temp(self, line_):
+    def disconnect_temp_line(self, line_):
         if line_ not in self.temp_lines:
             return
         if self.type == 'in':
@@ -380,7 +385,7 @@ class Port(QtWidgets.QGraphicsItem):
         self.temp_lines.remove(line_)
         self.update()
 
-    def connect(self, line_, not_del=False):
+    def connect_line(self, line_, not_del=False):
         if self.type == 'in':
             if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
@@ -395,7 +400,7 @@ class Port(QtWidgets.QGraphicsItem):
             self.lines.append(line_)
         self.update()
 
-    def connect_temp(self, line_):
+    def connect_temp_line(self, line_):
         if self.type == 'in':
             line_.target = self
             line_.point_b = self.get_center()

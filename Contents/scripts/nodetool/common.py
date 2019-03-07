@@ -29,23 +29,27 @@ def get_xml_dir():
     return path
 
 
-def create_node_for_xml(xml_file=''):
+def create_node_for_xml(xml_file='', view=None):
     _dir = get_xml_dir()
     tree = ET.parse('{}\{}.xml'.format(_dir, xml_file))
     n = node.Node(name=xml_file, label=tree._root.attrib['Label'])
     p = tree.findall('Port')
-    create_ports_for_xml(p, n)
+    create_ports_for_xml(p, n, view)
     n.deploying_port()
     return n
 
 
-def create_node_for_save_data(scene, save_data):
-    node = create_node_for_xml(save_data['name'])
-    scene.add_item(node)
+def create_node_for_save_data(view, save_data):
+    node = create_node_for_xml(save_data['name'], view)
+    view.add_item(node)
     load_node_data(node, save_data, False)
 
 
-def create_ports_for_xml(ports_xml, parent):
+def create_history(*args):
+    print 'create_history'
+
+
+def create_ports_for_xml(ports_xml, parent, view):
     port_color = PortColor()
     for _p in ports_xml:
         if isinstance(parent, node.Node):
@@ -55,8 +59,9 @@ def create_ports_for_xml(ports_xml, parent):
         else:
             pp = port.Port(parent=parent, label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
                            color=getattr(port_color, _p.attrib.get('ValueType')), value_type=_p.attrib.get('ValueType'))
+        # pp.expanded.connect(create_history)
         _p_find = _p.findall('Port')
-        create_ports_for_xml(_p_find, pp)
+        create_ports_for_xml(_p_find, pp, view)
 
 
 def load_node_data(node, save_data, ports_only=False):
@@ -88,7 +93,7 @@ def get_save_data(nodes, lines):
 def load_save_data(data, view):
     nodes = []
     for _n in data['node']:
-        node = create_node_for_xml(_n['name'])
+        node = create_node_for_xml(_n['name'], view)
         view.add_item_on_center(node)
         load_node_data(node, _n, False)
         nodes.append(node)
@@ -116,8 +121,8 @@ def line_connect_for_save_data(line_data, view):
             source = _n.port[line_data['source']['port_name']]
         if line_data['target']['node_id'] == _n.id:
             target = _n.port[line_data['target']['port_name']]
-    source.connect(new_line)
-    target.connect(new_line)
+    source.connect_line(new_line)
+    target.connect_line(new_line)
     new_line.color = target.color
     view.add_item(new_line)
 
@@ -148,7 +153,7 @@ def get_lines_related_with_node(nodes, view):
     return related_lines
 
 
-def refresh_all_node_ids_in_scene(view):
+def refresh_all_node_id_in_scene(view):
     for _n in node.Node.scene_nodes_iter(view):
         _n.refresh_id()
 

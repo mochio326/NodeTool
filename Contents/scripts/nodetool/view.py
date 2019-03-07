@@ -3,6 +3,7 @@ from .vendor.Qt import QtCore, QtGui, QtWidgets
 import copy
 from . import common
 
+
 class View(QtWidgets.QGraphicsView):
     """
     QGraphicsView for displaying the nodes.
@@ -114,7 +115,6 @@ class View(QtWidgets.QGraphicsView):
             if selectedAction == load:
                 common.scene_load(self)
 
-
     def keyPressEvent(self, event):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ControlModifier:
@@ -140,7 +140,7 @@ class View(QtWidgets.QGraphicsView):
             print 'a'
             _bbox = self.scene().itemsBoundingRect()
             print _bbox.x(), _bbox.y()
-            _pos = self.mapToScene(_bbox.x(), _bbox.y() )
+            _pos = self.mapToScene(_bbox.x(), _bbox.y())
 
             self.translate(_pos.x(), _pos.y())
 
@@ -188,15 +188,21 @@ class View(QtWidgets.QGraphicsView):
         if self._clipboard is None:
             return
         self._paste_offset = self._paste_offset + 1
-        common.refresh_all_node_ids_in_scene(self)
+        common.refresh_all_node_id_in_scene(self)
+
+        for _n in self._clipboard['node']:
+            _n['z_value'] = _n['z_value'] + self._paste_offset
+            _n['x'] = _n['x'] + self._paste_offset * 10
+            _n['y'] = _n['y'] + self._paste_offset * 10
+
         nodes = common.load_save_data(self._clipboard, self)
         self.scene().clearSelection()
         for _n in nodes:
-            _n.setZValue(_n.zValue() + self._paste_offset)
-            _n.setX(_n.x() + self._paste_offset * 10)
-            _n.setY(_n.y() + self._paste_offset * 10)
             _n.setSelected(True)
         self.scene().update()
+
+    def create_history(self):
+        print 'create_history'
 
 # -----------------------------------------------------------------------------
 # EOF

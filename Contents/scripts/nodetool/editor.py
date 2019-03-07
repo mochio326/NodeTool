@@ -9,6 +9,11 @@ from .pin import Pin
 from .view import View
 from . import common
 
+
+def aaa():
+    print 'aaa'
+
+
 class SideBar(QtWidgets.QFrame):
     def __init__(self, parent):
         super(SideBar, self).__init__(parent)
@@ -43,18 +48,25 @@ class SideBar(QtWidgets.QFrame):
 
     def clickedAddBoxButton(self):
         window = self.window()
-        box = common.create_node_for_xml('hogera')
+        box = common.create_node_for_xml('hogera', window.view)
         window.view.add_item_on_center(box)
 
     def clickedAddBoxButton2(self):
         window = self.window()
-        box = common.create_node_for_xml('test2')
+        box = common.create_node_for_xml('test2', window.view)
         window.view.add_item_on_center(box)
 
     def clickedAddPinButton(self):
         window = self.window()
-        box = Pin(width=30, height=30, label=None)
+        import node
+        box = node.Node(name='test', label='label')
+        p = box.add_port('in', QtCore.Qt.red, 'Int')
+        p.expanded.connect(self.aaa)
         window.view.add_item_on_center(box)
+
+    def aaa(self):
+        print 'aaaaaaaaa'
+
 
 
 class NodeWindow(QtWidgets.QMainWindow):

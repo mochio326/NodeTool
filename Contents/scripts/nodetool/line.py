@@ -139,10 +139,10 @@ class Line(QtWidgets.QGraphicsPathItem):
     def delete(self):
         if self.source is not None:
             self.source.change_to_basic_color()
-            self.source.disconnect(self)
+            self.source.disconnect_line(self)
         if self.target is not None:
             self.target.change_to_basic_color()
-            self.target.disconnect(self)
+            self.target.disconnect_line(self)
         self.scene().views()[0].remove_item(self)
 
     def mousePressEvent(self, event):
@@ -159,10 +159,10 @@ class Line(QtWidgets.QGraphicsPathItem):
 
         if vector_a_abs < vector_b_abs:
             self.point_a = event.pos()
-            self.source.disconnect(self)
+            self.source.disconnect_line(self)
         else:
             self.point_b = event.pos()
-            self.target.disconnect(self)
+            self.target.disconnect_line(self)
 
     def mouseMoveEvent(self, event):
         if not self._can_edit():
@@ -210,7 +210,7 @@ class Line(QtWidgets.QGraphicsPathItem):
             self.delete()
             return False
 
-        item.connect(self)
+        item.connect_line(self)
         return True
 
     def update_path(self):
@@ -297,9 +297,9 @@ class TempLine(Line):
 
     def delete(self):
         if self.source is not None:
-            self.source.disconnect_temp(self)
+            self.source.disconnect_temp_line(self)
         if self.target is not None:
-            self.target.disconnect_temp(self)
+            self.target.disconnect_temp_line(self)
         self.scene().views()[0].remove_item(self)
 
     def mousePressEvent(self, event):
