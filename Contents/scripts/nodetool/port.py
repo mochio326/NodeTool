@@ -28,7 +28,6 @@ class PortExpandBox(QtWidgets.QGraphicsItem):
         painter.setPen(self.pen)
         painter.drawPath(self.shape())
 
-
     def boundingRect(self):
         rect = QtCore.QRect(0, 0, 10, self.height)
         return QtCore.QRectF(rect)
@@ -143,7 +142,7 @@ class PortLabel(QtWidgets.QGraphicsItem):
         self.port.expand()
 
 
-class Port(QtWidgets.QGraphicsItem, QtCore.QObject):
+class Port(QtWidgets.QGraphicsObject):
     PORT_SIZE = 12
     INTERVAL_SIZE = 25
 
@@ -253,7 +252,7 @@ class Port(QtWidgets.QGraphicsItem, QtCore.QObject):
             point_b = self.get_center()
 
         self.new_line = line.Line(point_a, point_b, self.color)
-        #self.scene().addItem(self.new_line)
+        # self.scene().addItem(self.new_line)
         self.scene().views()[0].add_item(self.new_line)
         self.connect_line(self.new_line, True)
 
@@ -284,7 +283,7 @@ class Port(QtWidgets.QGraphicsItem, QtCore.QObject):
             _p = _p.parentItem()
 
     def children_ports_all_iter(self):
-        for _p in  self.children_port:
+        for _p in self.children_port:
             yield _p
             for _pp in _p.children_ports_all_iter():
                 yield _pp
