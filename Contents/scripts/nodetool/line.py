@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
 import cmath
-
+import copy
 
 class LineArrow(QtWidgets.QGraphicsItem):
     def __init__(self, parent, color):
@@ -114,6 +114,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.setBrush(QtCore.Qt.NoBrush)
         self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
+        self.port_connected = False
 
     def _get_none_move_port(self):
         if self.source is None:
@@ -138,12 +139,16 @@ class Line(QtWidgets.QGraphicsPathItem):
 
     def delete(self):
         if self.source is not None:
+            port = self.source
             self.source.change_to_basic_color()
             self.source.disconnect_line(self)
         if self.target is not None:
+            port = self.target
             self.target.change_to_basic_color()
             self.target.disconnect_line(self)
         self.scene().views()[0].remove_item(self)
+        if self.port_connected:
+            port.node.port_connect_changed.emit()
 
     def mousePressEvent(self, event):
         #  どちらかのポートが非表示なとき編集できると混乱するので不可
@@ -211,6 +216,8 @@ class Line(QtWidgets.QGraphicsPathItem):
             return False
 
         item.connect_line(self)
+        item.node.port_connect_changed.emit()
+        self.port_connected = True
         return True
 
     def update_path(self):

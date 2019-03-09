@@ -156,6 +156,8 @@ class View(QtWidgets.QGraphicsView):
         _pos = self.mapToScene(self.width() / 2, self.height() / 2)
         node.setPos(_pos)
         node.port_expanded.connect(self.create_history)
+        node.pos_changed.connect(self.create_history)
+        node.port_connect_changed.connect(self.create_history)
         if history:
             self.create_history()
 

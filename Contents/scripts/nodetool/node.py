@@ -52,6 +52,8 @@ class Node(QtWidgets.QGraphicsObject):
     DEF_Z_VALUE = 0.1
 
     port_expanded = QtCore.Signal()
+    pos_changed = QtCore.Signal()
+    port_connect_changed = QtCore.Signal()
 
     @classmethod
     def scene_nodes_iter(cls, scene):
@@ -186,6 +188,7 @@ class Node(QtWidgets.QGraphicsObject):
             for _l in _p.lines:
                 _l.setZValue(_l.DEF_Z_VALUE)
         super(Node, self).mouseReleaseEvent(event)
+        self.pos_changed.emit()
 
     def delete(self):
         for _p in self.children_ports_all_iter():
