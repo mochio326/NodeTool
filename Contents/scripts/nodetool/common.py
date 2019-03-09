@@ -59,7 +59,6 @@ def create_ports_for_xml(ports_xml, parent, view):
         else:
             pp = port.Port(parent=parent, label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
                            color=getattr(port_color, _p.attrib.get('ValueType')), value_type=_p.attrib.get('ValueType'))
-        # pp.expanded.connect(create_history)
         _p_find = _p.findall('Port')
         create_ports_for_xml(_p_find, pp, view)
 
@@ -77,10 +76,14 @@ def load_node_data(node, save_data, ports_only=False):
 
 
 def scene_save(view):
+    save_data = get_save_data_from_scene_all(view)
+    not_escape_json_dump(r'c:\temp\node_tool.json', save_data)
+
+
+def get_save_data_from_scene_all(view):
     nodes = [_n for _n in node.Node.scene_nodes_iter(view)]
     lines = [_l for _l in line.Line.scene_lines_iter(view)]
-    save_data = get_save_data(nodes, lines)
-    not_escape_json_dump(r'c:\temp\node_tool.json', save_data)
+    return get_save_data(nodes, lines)
 
 
 def get_save_data(nodes, lines):
@@ -91,10 +94,12 @@ def get_save_data(nodes, lines):
 
 
 def load_save_data(data, view):
+    if data is None:
+        return
     nodes = []
     for _n in data['node']:
         node = create_node_for_xml(_n['name'], view)
-        view.add_item_on_center(node)
+        view.add_node_on_center(node, history=False)
         load_node_data(node, _n, False)
         nodes.append(node)
 

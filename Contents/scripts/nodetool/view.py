@@ -21,6 +21,8 @@ class View(QtWidgets.QGraphicsView):
         self.drag = False
         self._clipboard = None
         self.add_items = []
+        self._operation_history = [None]
+        self._current_operation_history = 0
 
     def drawBackground(self, painter, rect):
         scene_height = self.sceneRect().height()
@@ -123,37 +125,39 @@ class View(QtWidgets.QGraphicsView):
                 return
             if event.key() == QtCore.Qt.Key_V:
                 self._paste()
+                self.create_history()
                 return
             if event.key() == QtCore.Qt.Key_X:
                 # self._cut()
                 print 'cut'
                 return
             if event.key() == QtCore.Qt.Key_Z:
-                # self._undo()
+                self._undo_redo_base('undo')
                 print 'undo'
                 return
             if event.key() == QtCore.Qt.Key_Y:
                 print 'redo'
-                # self._redo()
+                self._undo_redo_base('redo')
                 return
         if event.key() == QtCore.Qt.Key_A:
-            print 'a'
             _bbox = self.scene().itemsBoundingRect()
-            print _bbox.x(), _bbox.y()
             _pos = self.mapToScene(_bbox.x(), _bbox.y())
-
             self.translate(_pos.x(), _pos.y())
 
             return
 
         if event.key() == QtCore.Qt.Key_Delete:
             self._delete()
+            self.create_history()
             return
 
-    def add_item_on_center(self, widget):
-        self.add_item(widget)
+    def add_node_on_center(self, node, history=True):
+        self.add_item(node)
         _pos = self.mapToScene(self.width() / 2, self.height() / 2)
-        widget.setPos(_pos)
+        node.setPos(_pos)
+        node.port_expanded.connect(self.create_history)
+        if history:
+            self.create_history()
 
     def add_item(self, widget):
         if not isinstance(widget, list):
@@ -202,7 +206,24 @@ class View(QtWidgets.QGraphicsView):
         self.scene().update()
 
     def create_history(self):
-        print 'create_history'
+        data = common.get_save_data_from_scene_all(self)
+        # Undo Redo用の操作
+        if self._current_operation_history > 0:
+            del self._operation_history[0:self._current_operation_history]
+        self._operation_history.insert(0, data)
+        self._current_operation_history = 0
+
+    def _undo_redo_base(self, type_):
+        _add = 1 if type_ == 'undo' else -1
+        if self._current_operation_history >= len(self._operation_history) - _add:
+            return
+        if self._current_operation_history + _add < 0:
+            return
+        self._current_operation_history = self._current_operation_history + _add
+        data = self._operation_history[self._current_operation_history]
+        self.clear()
+        common.load_save_data(data, self)
+
 
 # -----------------------------------------------------------------------------
 # EOF

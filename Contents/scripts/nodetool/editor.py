@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-import maya.OpenMayaUI as OpenMayaUI
 from shiboken2 import wrapInstance
 
-from .node import Node
-from .port import Port
-from .pin import Pin
 from .view import View
 from . import common
 
@@ -49,12 +45,12 @@ class SideBar(QtWidgets.QFrame):
     def clickedAddBoxButton(self):
         window = self.window()
         box = common.create_node_for_xml('hogera', window.view)
-        window.view.add_item_on_center(box)
+        window.view.add_node_on_center(box)
 
     def clickedAddBoxButton2(self):
         window = self.window()
         box = common.create_node_for_xml('test2', window.view)
-        window.view.add_item_on_center(box)
+        window.view.add_node_on_center(box)
 
     def clickedAddPinButton(self):
         window = self.window()
@@ -62,11 +58,7 @@ class SideBar(QtWidgets.QFrame):
         box = node.Node(name='test', label='label')
         p = box.add_port('in', QtCore.Qt.red, 'Int')
         p.expanded.connect(self.aaa)
-        window.view.add_item_on_center(box)
-
-    def aaa(self):
-        print 'aaaaaaaaa'
-
+        window.view.add_node_on_center(box)
 
 
 class NodeWindow(QtWidgets.QMainWindow):
@@ -132,15 +124,22 @@ def mayaMainWindow():
 
     :return: Maya Main Window.
     """
+    import maya.OpenMayaUI as OpenMayaUI
     mainWindowPtr = OpenMayaUI.MQtUtil.mainWindow()
     return wrapInstance(long(mainWindowPtr), QtWidgets.QWidget)
 
 
-def main():
+def maya_main():
     mayaWindow = mayaMainWindow()
     nodeWindow = NodeWindow(mayaWindow)
     nodeWindow.show()
 
+def main(parent=None):
+    from sys import exit, argv
+    app = QtWidgets.QApplication(argv)
+    nodeWindow = NodeWindow(parent)
+    nodeWindow.show()
+    exit(app.exec_())
 
 if __name__ == '__main__':
     main()

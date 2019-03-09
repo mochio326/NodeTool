@@ -146,8 +146,6 @@ class Port(QtWidgets.QGraphicsObject):
     PORT_SIZE = 12
     INTERVAL_SIZE = 25
 
-    expanded = QtCore.Signal()
-
     @property
     def node(self):
         return self.topLevelItem()
@@ -252,7 +250,6 @@ class Port(QtWidgets.QGraphicsObject):
             point_b = self.get_center()
 
         self.new_line = line.Line(point_a, point_b, self.color)
-        # self.scene().addItem(self.new_line)
         self.scene().views()[0].add_item(self.new_line)
         self.connect_line(self.new_line, True)
 
@@ -302,7 +299,7 @@ class Port(QtWidgets.QGraphicsObject):
         self.create_temp_line()
         self.node.update()
         self.scene().update()
-        self.expanded.emit()
+        self.node.port_expanded.emit()
 
     def delete_temp_line(self):
         if not self.children_port_expand:

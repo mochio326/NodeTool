@@ -47,9 +47,11 @@ class NodeLabel(QtWidgets.QGraphicsItem):
         return path3
 
 
-class Node(QtWidgets.QGraphicsItem):
+class Node(QtWidgets.QGraphicsObject):
     TYPE = 'Node'
     DEF_Z_VALUE = 0.1
+
+    port_expanded = QtCore.Signal()
 
     @classmethod
     def scene_nodes_iter(cls, scene):
