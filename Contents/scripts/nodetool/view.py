@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-import copy
+import uuid
 from . import common
 
 
@@ -194,12 +194,21 @@ class View(QtWidgets.QGraphicsView):
         if self._clipboard is None:
             return
         self._paste_offset = self._paste_offset + 1
-        common.refresh_all_node_id_in_scene(self)
+        # common.refresh_all_node_id_in_scene(self)
 
+        id_change_dict = {}
         for _n in self._clipboard['node']:
+            new_id = str(uuid.uuid4())
+            id_change_dict[_n['id']] = new_id
+            _n['id'] = new_id
             _n['z_value'] = _n['z_value'] + self._paste_offset
             _n['x'] = _n['x'] + self._paste_offset * 10
             _n['y'] = _n['y'] + self._paste_offset * 10
+        for _l in self._clipboard['line']:
+            if id_change_dict.get(_l['source']['node_id']) is not None:
+                _l['source']['node_id'] = id_change_dict.get(_l['source']['node_id'])
+            if id_change_dict.get(_l['target']['node_id']) is not None:
+                _l['target']['node_id'] = id_change_dict.get(_l['target']['node_id'])
 
         nodes = common.load_save_data(self._clipboard, self)
         self.scene().clearSelection()
