@@ -139,17 +139,41 @@ class View(QtWidgets.QGraphicsView):
                 print 'redo'
                 self._undo_redo_base('redo')
                 return
-        if event.key() == QtCore.Qt.Key_A:
-            _bbox = self.scene().itemsBoundingRect()
-            _pos = self.mapToScene(_bbox.x(), _bbox.y())
-            self.translate(_pos.x(), _pos.y())
 
+        if event.key() == QtCore.Qt.Key_F:
+            self.selected_item_focus()
+            return
+
+        if event.key() == QtCore.Qt.Key_A:
+            self.all_item_focus()
             return
 
         if event.key() == QtCore.Qt.Key_Delete:
+            print 'Delete'
             self._delete()
             self.create_history()
             return
+
+    def selected_item_focus(self):
+        self.focus(self.scene().selectedItems())
+
+    def all_item_focus(self):
+        self.focus(self.add_items)
+
+    def focus(self, items):
+        if len(items) == 0:
+            return
+        self.resetMatrix()
+        rect = QtCore.QRectF(0, 0, 0, 0)
+        for _i in items:
+            rect = rect.united(_i.sceneBoundingRect())
+        center = QtCore.QPoint(rect.width() / 2 + rect.x(), rect.height() / 2 + rect.y())
+        w_s = self.width() / rect.width()
+        h_s = self.height() / rect.height()
+        zoom_factor = w_s if w_s < h_s else h_s
+        zoom_factor = zoom_factor * 0.9
+        self.scale(zoom_factor, zoom_factor)
+        self.centerOn(center)
 
     def add_node_on_center(self, node, history=True):
         self.add_item(node)
@@ -194,8 +218,8 @@ class View(QtWidgets.QGraphicsView):
         if self._clipboard is None:
             return
         self._paste_offset = self._paste_offset + 1
-        # common.refresh_all_node_id_in_scene(self)
 
+        # 貼り付け前に保存データ内のノードIDを変更することでIDの重複を避ける
         id_change_dict = {}
         for _n in self._clipboard['node']:
             new_id = str(uuid.uuid4())
