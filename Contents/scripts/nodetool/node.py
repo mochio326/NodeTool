@@ -99,6 +99,7 @@ class Node(QtWidgets.QGraphicsObject):
         self.setZValue(self.DEF_Z_VALUE)
         self.width = width
         self.height = height
+        self.drag = False
 
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
@@ -116,7 +117,7 @@ class Node(QtWidgets.QGraphicsObject):
 
         self.sel_pen = QtGui.QPen()
         self.sel_pen.setStyle(QtCore.Qt.SolidLine)
-        self.sel_pen.setWidth(1)
+        self.sel_pen.setWidth(2)
         self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
 
         if label is not None:
@@ -159,36 +160,63 @@ class Node(QtWidgets.QGraphicsObject):
             _p.deploying_port()
         self.height = _port_y + 5
 
-    def mousePressEvent(self, event):
-        # 自身と関連するラインを見やすくするために最前面表示
-        self.setZValue(100.0)
-        for _p in self.ports:
+    def get_source_nodes(self):
+        source_nodes = []
+        for _p in self.children_ports_all_iter():
+            if _p.type == 'out':
+                continue
             for _l in _p.lines:
-                _l.setZValue(100.0)
+                n = _l.source.node
+                source_nodes.append(n)
+                source_nodes.extend(n.get_source_nodes())
+        return source_nodes
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MiddleButton and event.modifiers() == QtCore.Qt.ControlModifier:
+
+            self.scene().clearSelection()
+            for _n in self.get_source_nodes():
+                _n.setSelected(True)
+            self.setSelected(True)
+            self.scene().update()
+
+
+        elif event.button() == QtCore.Qt.LeftButton:
+            self.drag = True
+            # 自身と関連するラインを見やすくするために最前面表示
+            self.setZValue(100.0)
+            for _p in self.ports:
+                for _l in _p.lines:
+                    _l.setZValue(100.0)
         super(Node, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         super(Node, self).mouseMoveEvent(event)
-        # 自身以外も選択されている場合にまとめて処理する
-        for _n in self.scene().selectedItems():
-            for _p in _n.ports:
-                _p.update_connect_line_pos()
-        self.scene().update()
+
+        if self.drag:
+            # 自身以外も選択されている場合にまとめて処理する
+            for _n in self.scene().selectedItems():
+                for _p in _n.ports:
+                    _p.update_connect_line_pos()
+            self.scene().update()
 
     def mouseReleaseEvent(self, event):
-        # ノードを現在の描画順を維持したまま数値を整頓
-        node_z_list = []
-        for _n in self.scene_nodes_iter(self.scene()):
-            node_z_list.append([_n.zValue(), _n])
-        node_z_list = sorted(node_z_list, key=lambda x:x[0])
-        for _i, _n in enumerate(node_z_list):
-            _n[1].setZValue(self.DEF_Z_VALUE + 0.01 * _i)
-        # ラインは最後面に戻しとく
-        for _p in self.ports:
-            for _l in _p.lines:
-                _l.setZValue(_l.DEF_Z_VALUE)
-        super(Node, self).mouseReleaseEvent(event)
-        self.pos_changed.emit()
+        if self.drag:
+            self.drag = False
+
+            # ノードを現在の描画順を維持したまま数値を整頓
+            node_z_list = []
+            for _n in self.scene_nodes_iter(self.scene()):
+                node_z_list.append([_n.zValue(), _n])
+            node_z_list = sorted(node_z_list, key=lambda x:x[0])
+            for _i, _n in enumerate(node_z_list):
+                _n[1].setZValue(self.DEF_Z_VALUE + 0.01 * _i)
+            # ラインは最後面に戻しとく
+            for _p in self.ports:
+                for _l in _p.lines:
+                    _l.setZValue(_l.DEF_Z_VALUE)
+            super(Node, self).mouseReleaseEvent(event)
+            self.pos_changed.emit()
 
     def delete(self):
         for _p in self.children_ports_all_iter():
