@@ -137,7 +137,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         else:
             self.point_b = pos
 
-    def delete(self):
+    def delete(self, create_history=True):
         if self.source is not None:
             port = self.source
             self.source.change_to_basic_color()
@@ -147,7 +147,8 @@ class Line(QtWidgets.QGraphicsPathItem):
             self.target.change_to_basic_color()
             self.target.disconnect_line(self)
         self.scene().views()[0].remove_item(self)
-        if self.port_connected:
+
+        if self.port_connected and create_history:
             port.node.port_connect_changed.emit()
 
     def mousePressEvent(self, event):

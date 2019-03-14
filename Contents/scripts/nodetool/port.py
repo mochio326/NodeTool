@@ -385,7 +385,7 @@ class Port(QtWidgets.QGraphicsObject):
         if self.type == 'in':
             if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
-                _l.delete()
+                _l.delete(create_history=False)
                 self.lines = []
             line_.target = self
             line_.point_b = self.get_center()
