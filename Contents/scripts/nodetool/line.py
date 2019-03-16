@@ -146,6 +146,7 @@ class Line(QtWidgets.QGraphicsPathItem):
             port = self.target
             self.target.change_to_basic_color()
             self.target.disconnect_line(self)
+
         self.scene().views()[0].remove_item(self)
 
         if self.port_connected and create_history:
@@ -217,6 +218,7 @@ class Line(QtWidgets.QGraphicsPathItem):
             return False
 
         item.connect_line(self)
+        _none_move_port.connect_line(self)
         item.node.port_connect_changed.emit()
         self.port_connected = True
         return True

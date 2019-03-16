@@ -120,11 +120,39 @@ class Node(QtWidgets.QGraphicsObject):
         self.sel_pen.setWidth(2)
         self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
 
+        self._old_recalculation_weight = 0
+        self.recalculation_weight = 0
+
         if label is not None:
-            NodeLabel(self, label)
+            self.label = NodeLabel(self, label)
             self.port_init_y = 30
         else:
             self.port_init_y = 10
+
+    @property
+    def is_recalculation(self):
+        return not self._old_recalculation_weight == self.recalculation_weight
+
+    def update_recalculation_weight(self):
+        self._old_recalculation_weight = self.recalculation_weight
+        _source_nodes = self.get_source_nodes()
+        self.recalculation_weight = len(_source_nodes)
+
+    def debug_update_label(self, processing_order=None):
+        label = str(self.recalculation_weight)
+        if self.is_recalculation:
+            label = label + ' ★'
+        if processing_order is not None:
+            label = label + ' ' + str(processing_order)
+        self.label.label = label
+        self.label.pen.setColor(QtGui.QColor(255, 0, 0, 255))
+        self.label.update()
+
+        for _p in self.children_ports_all_iter():
+            _p.label.label = str(len(_p.lines))
+            #_p.label.pen.setColor(QtGui.QColor(255, 0, 0, 255))
+            _p.label.update()
+
 
     def refresh_id(self):
         self.id = str(uuid.uuid4())
@@ -169,7 +197,7 @@ class Node(QtWidgets.QGraphicsObject):
                 n = _l.source.node
                 source_nodes.append(n)
                 source_nodes.extend(n.get_source_nodes())
-        return source_nodes
+        return list(set(source_nodes))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MiddleButton and event.modifiers() == QtCore.Qt.ControlModifier:
@@ -179,7 +207,6 @@ class Node(QtWidgets.QGraphicsObject):
                 _n.setSelected(True)
             self.setSelected(True)
             self.scene().update()
-
 
         elif event.button() == QtCore.Qt.LeftButton:
             self.drag = True

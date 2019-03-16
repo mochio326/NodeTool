@@ -187,7 +187,7 @@ class Port(QtWidgets.QGraphicsObject):
         self.rect = QtCore.QRect(rect_x, 0, 12, 12)
 
         if label is not None:
-            PortLabel(self, label)
+            self.label = PortLabel(self, label)
 
         self.expand_box = PortExpandBox(self)
 
@@ -258,8 +258,8 @@ class Port(QtWidgets.QGraphicsObject):
 
     def mouseReleaseEvent(self, event):
         _f = self.new_line.mouseReleaseEvent(event)
-        if _f:
-            self.connect_line(self.new_line)
+        #if _f:
+        #    self.connect_line(self.new_line)
 
     def parent_port_count(self):
         count = int(0)
@@ -394,6 +394,7 @@ class Port(QtWidgets.QGraphicsObject):
             line_.point_a = self.get_center()
         if not not_del:
             self.lines.append(line_)
+        self.lines = list(set(self.lines))
         self.update()
 
     def connect_temp_line(self, line_):

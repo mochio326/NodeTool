@@ -45,8 +45,19 @@ def create_node_for_save_data(view, save_data):
     load_node_data(node, save_data, False)
 
 
-def create_history(*args):
-    print 'create_history'
+def nodes_recalculation(view):
+    recalculation_nodes = []
+    for _n in node.Node.scene_nodes_iter(view):
+        _n.update_recalculation_weight()
+        _n.debug_update_label()
+        if _n.is_recalculation:
+            recalculation_nodes.append(_n)
+
+    # recalculation_weightを基準に並び替え
+    sorted(recalculation_nodes, key=lambda n: n.recalculation_weight)
+
+    for i, _n in enumerate(recalculation_nodes[::-1]):
+        _n.debug_update_label(i)
 
 
 def create_ports_for_xml(ports_xml, parent, view):
@@ -109,6 +120,8 @@ def load_save_data(data, view):
     for _n in nodes:
         for _p in _n.children_ports_all_iter():
             _p.create_temp_line()
+
+    view.recalculation()
 
     return nodes
 

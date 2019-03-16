@@ -46,11 +46,14 @@ class SideBar(QtWidgets.QFrame):
         window = self.window()
         box = common.create_node_for_xml('hogera', window.view)
         window.view.add_node_on_center(box)
+        box.debug_update_label()
 
     def clickedAddBoxButton2(self):
         window = self.window()
         box = common.create_node_for_xml('test2', window.view)
         window.view.add_node_on_center(box)
+        box.debug_update_label()
+
 
     def clickedAddPinButton(self):
         window = self.window()
@@ -70,11 +73,11 @@ class NodeWindow(QtWidgets.QMainWindow):
 
         self.initUi()
         self.move(200, 150)
-        self.setFixedSize(800, 500)
+        self.setFixedSize(900, 600)
 
     def initUi(self):
         # Window.
-        self.setMinimumSize(400, 200)
+        self.setMinimumSize(500, 300)
 
         # Central Widget.
         self.central_widget = QtWidgets.QFrame()

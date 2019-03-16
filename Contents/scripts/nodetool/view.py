@@ -3,7 +3,6 @@ from .vendor.Qt import QtCore, QtGui, QtWidgets
 import uuid
 from . import common
 
-
 class View(QtWidgets.QGraphicsView):
     """
     QGraphicsView for displaying the nodes.
@@ -181,9 +180,13 @@ class View(QtWidgets.QGraphicsView):
         node.setPos(_pos)
         node.port_expanded.connect(self.create_history)
         node.pos_changed.connect(self.create_history)
-        node.port_connect_changed.connect(self.create_history)
+        node.port_connect_changed.connect(self.recalculation)
         if history:
             self.create_history()
+
+    def recalculation(self):
+        common.nodes_recalculation(self)
+        self.create_history()
 
     def add_item(self, widget):
         if not isinstance(widget, list):
