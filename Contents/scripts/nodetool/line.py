@@ -219,6 +219,16 @@ class Line(QtWidgets.QGraphicsPathItem):
 
         item.connect_line(self)
         _none_move_port.connect_line(self)
+
+        # 接続時に上位ノードの再計算を促す
+        if item.type == 'in':
+            n = _none_move_port.node
+        else:
+            n = item.node
+        # n.forced_recalculation = True
+        for tn in n.get_target_nodes():
+            tn.forced_recalculation = True
+
         item.node.port_connect_changed.emit()
         self.port_connected = True
         return True

@@ -174,6 +174,12 @@ class Port(QtWidgets.QGraphicsObject):
         self.children_port_expand = False
         self.name = label
 
+        import random
+        if self.type == 'in':
+            self.value = int(random.uniform(0, 5))
+        else:
+            self.value = 0
+
         if isinstance(parent, Port):
             rect_x = parent.rect.x()
             self.type = parent.type
@@ -187,7 +193,7 @@ class Port(QtWidgets.QGraphicsObject):
         self.rect = QtCore.QRect(rect_x, 0, 12, 12)
 
         if label is not None:
-            self.label = PortLabel(self, label)
+            self.label = PortLabel(self, str(self.value))
 
         self.expand_box = PortExpandBox(self)
 
@@ -396,6 +402,7 @@ class Port(QtWidgets.QGraphicsObject):
             self.lines.append(line_)
         self.lines = list(set(self.lines))
         self.update()
+
 
     def connect_temp_line(self, line_):
         if self.type == 'in':

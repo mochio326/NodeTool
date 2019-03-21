@@ -181,6 +181,7 @@ class View(QtWidgets.QGraphicsView):
         node.port_expanded.connect(self.create_history)
         node.pos_changed.connect(self.create_history)
         node.port_connect_changed.connect(self.recalculation)
+        node.recalculation()
         if history:
             self.create_history()
 

@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import glob
 import os
 import json
+from types import MethodType
 
 
 class PortColor(object):
@@ -29,10 +30,28 @@ def get_xml_dir():
     return path
 
 
+class XmlNode(node.Node):
+    def __init__(self, name='', label='node', xml_code=''):
+        self.code = xml_code
+        super(XmlNode, self).__init__(name=name, label=label)
+
+    def recalculation(self):
+        code_str = self.code.replace('{{', 'self.port["').replace('}}', '"]')
+        exec(code_str)
+        super(XmlNode, self).recalculation()
+        self.update()
+
+    def update(self):
+        for _p in self.children_ports_all_iter():
+            _p.label.label = str(_p.value)
+            _p.label.update()
+        super(XmlNode, self).update()
+
+
 def create_node_for_xml(xml_file='', view=None):
     _dir = get_xml_dir()
     tree = ET.parse('{}\{}.xml'.format(_dir, xml_file))
-    n = node.Node(name=xml_file, label=tree._root.attrib['Label'])
+    n = XmlNode(name=xml_file, label=tree._root.attrib['Label'], xml_code=tree.find('Code').text)
     p = tree.findall('Port')
     create_ports_for_xml(p, n, view)
     n.deploying_port()
@@ -49,15 +68,16 @@ def nodes_recalculation(view):
     recalculation_nodes = []
     for _n in node.Node.scene_nodes_iter(view):
         _n.update_recalculation_weight()
-        _n.debug_update_label()
-        if _n.is_recalculation:
+        if _n.forced_recalculation:
             recalculation_nodes.append(_n)
 
     # recalculation_weightを基準に並び替え
-    sorted(recalculation_nodes, key=lambda n: n.recalculation_weight)
+    recalculation_nodes = sorted(recalculation_nodes, key=lambda n: n.recalculation_weight)
 
-    for i, _n in enumerate(recalculation_nodes[::-1]):
-        _n.debug_update_label(i)
+    for i, _n in enumerate(recalculation_nodes):
+        _n.propagation_port_value()
+        _n.recalculation()
+        _n.update()
 
 
 def create_ports_for_xml(ports_xml, parent, view):
@@ -76,7 +96,8 @@ def create_ports_for_xml(ports_xml, parent, view):
 
 def load_node_data(node, save_data, ports_only=False):
     for _p in node.children_ports_all_iter():
-        _p.children_port_expand = save_data['ports'][_p.name]
+        _p.children_port_expand = save_data['ports'][_p.name]['expand']
+        _p.value = save_data['ports'][_p.name]['value']
     node.deploying_port()
     if ports_only:
         return
@@ -84,6 +105,7 @@ def load_node_data(node, save_data, ports_only=False):
     node.setZValue(save_data['z_value'])
     node.setX(save_data['x'])
     node.setY(save_data['y'])
+    node.update()
 
 
 def scene_save(view):

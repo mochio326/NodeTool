@@ -77,9 +77,13 @@ class Node(QtWidgets.QGraphicsObject):
         data['y'] = self.y()
         data['ports'] = {}
         for _p in self.ports:
-            data['ports'][_p.name] = _p.children_port_expand
+            data['ports'][_p.name] = {}
+            data['ports'][_p.name]['expand'] = _p.children_port_expand
+            data['ports'][_p.name]['value'] = _p.value
             for _pp in _p.children_ports_all_iter():
-                data['ports'][_pp.name] = _pp.children_port_expand
+                data['ports'][_pp.name] = {}
+                data['ports'][_pp.name]['expand'] = _pp.children_port_expand
+                data['ports'][_pp.name]['value'] = _pp.value
         return data
 
     @property
@@ -120,7 +124,7 @@ class Node(QtWidgets.QGraphicsObject):
         self.sel_pen.setWidth(2)
         self.sel_pen.setColor(QtGui.QColor(0, 255, 255, 255))
 
-        self._old_recalculation_weight = 0
+        self.forced_recalculation = False
         self.recalculation_weight = 0
 
         if label is not None:
@@ -129,30 +133,51 @@ class Node(QtWidgets.QGraphicsObject):
         else:
             self.port_init_y = 10
 
-    @property
-    def is_recalculation(self):
-        return not self._old_recalculation_weight == self.recalculation_weight
+    def recalculation(self, *args, **kwargs):
+        # if len(args) == 0:
+        #     processing_order = None
+        # else:
+        #     processing_order = args[0]
+        # self.debug_update_label(processing_order)
+        self.forced_recalculation = False
 
     def update_recalculation_weight(self):
-        self._old_recalculation_weight = self.recalculation_weight
         _source_nodes = self.get_source_nodes()
         self.recalculation_weight = len(_source_nodes)
 
+    def propagation_port_value(self):
+        for _p in self.children_ports_all_iter():
+            if _p.type == 'in':
+                if len(_p.lines) > 0:
+                    _p.value = _p.lines[0].source.value
+
     def debug_update_label(self, processing_order=None):
-        label = str(self.recalculation_weight)
-        if self.is_recalculation:
-            label = label + ' ★'
+        # ノードのラベルで子ノードの数と処理順を表示するデバッグ処理
+        # label = str(self.recalculation_weight)
+        self.label.pen.setColor(QtGui.QColor(255, 255, 255, 255))
+        # if self.forced_recalculation:
+        #     label = label + ' ★'
         if processing_order is not None:
-            label = label + ' ' + str(processing_order)
-        self.label.label = label
-        self.label.pen.setColor(QtGui.QColor(255, 0, 0, 255))
+        #     label = label + ' ' + str(processing_order)
+            self.label.pen.setColor(QtGui.QColor(255, 0, 0, 255))
+        #
+        # self.label.label = label
         self.label.update()
 
+        # テストで入力ポートの数値を全部加算する処理
+        total = 0
         for _p in self.children_ports_all_iter():
-            _p.label.label = str(len(_p.lines))
-            #_p.label.pen.setColor(QtGui.QColor(255, 0, 0, 255))
-            _p.label.update()
+            if _p.type == 'in':
+                if len(_p.lines) > 0:
+                    _p.value = _p.lines[0].source.value
+                total = total + _p.value
+        for _p in self.children_ports_all_iter():
+            if _p.type == 'out':
+                _p.value = total
 
+        for _p in self.children_ports_all_iter():
+            _p.label.label = str(_p.value)
+            _p.label.update()
 
     def refresh_id(self):
         self.id = str(uuid.uuid4())
@@ -189,15 +214,21 @@ class Node(QtWidgets.QGraphicsObject):
         self.height = _port_y + 5
 
     def get_source_nodes(self):
-        source_nodes = []
+        return self.get_connection_node('out', 'source')
+
+    def get_target_nodes(self):
+        return self.get_connection_node('in', 'target')
+
+    def get_connection_node(self, port_type, line_side):
+        nodes = []
         for _p in self.children_ports_all_iter():
-            if _p.type == 'out':
+            if _p.type == port_type:
                 continue
             for _l in _p.lines:
-                n = _l.source.node
-                source_nodes.append(n)
-                source_nodes.extend(n.get_source_nodes())
-        return list(set(source_nodes))
+                n = getattr(_l, line_side).node
+                nodes.append(n)
+                nodes.extend(n.get_connection_node(port_type, line_side))
+        return list(set(nodes))
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MiddleButton and event.modifiers() == QtCore.Qt.ControlModifier:

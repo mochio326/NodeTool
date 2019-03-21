@@ -24,10 +24,10 @@ class SideBar(QtWidgets.QFrame):
         self.central_layout = QtWidgets.QVBoxLayout(self)
 
         # Buttons.
-        self.add_box_button = QtWidgets.QPushButton('Add Box')
+        self.add_box_button = QtWidgets.QPushButton('Add')
         self.central_layout.addWidget(self.add_box_button)
         # Buttons.
-        self.add_box_button2 = QtWidgets.QPushButton('Add Box2')
+        self.add_box_button2 = QtWidgets.QPushButton('Multiply')
         self.central_layout.addWidget(self.add_box_button2)
 
         # Buttons.
@@ -46,14 +46,13 @@ class SideBar(QtWidgets.QFrame):
         window = self.window()
         box = common.create_node_for_xml('hogera', window.view)
         window.view.add_node_on_center(box)
-        box.debug_update_label()
+        box.recalculation()
 
     def clickedAddBoxButton2(self):
         window = self.window()
         box = common.create_node_for_xml('test2', window.view)
         window.view.add_node_on_center(box)
-        box.debug_update_label()
-
+        box.recalculation()
 
     def clickedAddPinButton(self):
         window = self.window()
