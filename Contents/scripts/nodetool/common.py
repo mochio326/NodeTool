@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import glob
 import os
 import json
+import re
 from types import MethodType
 
 
@@ -37,7 +38,7 @@ class XmlNode(node.Node):
 
     def recalculation(self):
         code_str = self.code.replace('{{', 'self.port["').replace('}}', '"]')
-        exec(code_str)
+        exec (code_str)
         super(XmlNode, self).recalculation()
         self.update()
 
@@ -51,12 +52,28 @@ class XmlNode(node.Node):
 def create_node_for_xml(xml_file='', view=None):
     _dir = get_xml_dir()
     tree = ET.parse('{}\{}.xml'.format(_dir, xml_file))
-    n = XmlNode(name=xml_file, label=tree._root.attrib['Label'], xml_code=tree.find('Code').text)
+    n = XmlNode(name=xml_file, label=tree._root.attrib['Label'], xml_code=format_code(tree.find('Code').text))
     p = tree.findall('Port')
     create_ports_for_xml(p, n, view)
     n.deploying_port()
     return n
 
+
+def format_code(code):
+    code = '\n'.split(code)
+    match_end = None
+    for i, c in enumerate(code):
+        if c.strip() == '':
+            continue
+        m = re.match('^ +', c)
+        if match_end is None:
+            if m is None:
+                match_end = 0
+            else:
+                match_end = m.end()
+        if len(c) > match_end:
+            code[i] = c[match_end:]
+    return '\n'.join(code)
 
 def create_node_for_save_data(view, save_data):
     node = create_node_for_xml(save_data['name'], view)
@@ -86,10 +103,11 @@ def create_ports_for_xml(ports_xml, parent, view):
         if isinstance(parent, node.Node):
             pp = parent.add_port(label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
                                  color=getattr(port_color, _p.attrib.get('ValueType')),
-                                 value_type=_p.attrib.get('ValueType'))
+                                 value_type=_p.attrib.get('ValueType'), value=_p.attrib.get('DefaultValue'))
         else:
             pp = port.Port(parent=parent, label=_p.attrib.get('Label'), port_type=_p.attrib.get('Type'),
-                           color=getattr(port_color, _p.attrib.get('ValueType')), value_type=_p.attrib.get('ValueType'))
+                           color=getattr(port_color, _p.attrib.get('ValueType')), value_type=_p.attrib.get('ValueType'),
+                           value=_p.attrib.get('DefaultValue'))
         _p_find = _p.findall('Port')
         create_ports_for_xml(_p_find, pp, view)
 
@@ -143,7 +161,7 @@ def load_save_data(data, view):
         for _p in _n.children_ports_all_iter():
             _p.create_temp_line()
 
-    view.recalculation()
+    nodes_recalculation(view)
 
     return nodes
 
@@ -188,7 +206,7 @@ def get_lines_related_with_node(nodes, view):
     nodes_id = [_n.id for _n in nodes]
     related_lines = []
     for _l in line.Line.scene_lines_iter(view):
-        if _l.source.node.id in nodes_id and  _l.target.node.id in nodes_id:
+        if _l.source.node.id in nodes_id and _l.target.node.id in nodes_id:
             related_lines.append(_l)
     return related_lines
 

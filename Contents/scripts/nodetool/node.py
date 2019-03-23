@@ -182,8 +182,8 @@ class Node(QtWidgets.QGraphicsObject):
     def refresh_id(self):
         self.id = str(uuid.uuid4())
 
-    def add_port(self, port_type, color, value_type, label=None):
-        p = port.Port(self, port_type=port_type, color=color, value_type=value_type, label=label)
+    def add_port(self, port_type, color, value_type, label=None, value=None):
+        p = port.Port(self, port_type=port_type, color=color, value_type=value_type, label=label, value=value)
         self.deploying_port()
         self.update()
         return p

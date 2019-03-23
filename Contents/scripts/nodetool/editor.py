@@ -23,34 +23,23 @@ class SideBar(QtWidgets.QFrame):
         # Central Layout.
         self.central_layout = QtWidgets.QVBoxLayout(self)
 
-        # Buttons.
-        self.add_box_button = QtWidgets.QPushButton('Add')
+        self.add_button('Add(＋)', 'Add')
+        self.add_button('Subtract(ー)', 'Subtract')
+        self.add_button('Multiply(×)', 'Multiply')
+        self.add_button('Modulo(÷)', 'Modulo')
+        self.add_button('1', '1')
+        self.add_button('2', '2')
+        self.add_button('3', '3')
+        self.add_button('4', '4')
+
+    def add_button(self, label, xml_name):
+        self.add_box_button = QtWidgets.QPushButton(label)
         self.central_layout.addWidget(self.add_box_button)
-        # Buttons.
-        self.add_box_button2 = QtWidgets.QPushButton('Multiply')
-        self.central_layout.addWidget(self.add_box_button2)
+        self.add_box_button.clicked.connect(lambda: self.clickedBoxButton(xml_name))
 
-        # Buttons.
-        self.add_pin_button = QtWidgets.QPushButton('Add Pin')
-        self.central_layout.addWidget(self.add_pin_button)
-
-        # Connections.
-        self.initConnections()
-
-    def initConnections(self):
-        self.add_box_button.clicked.connect(self.clickedAddBoxButton)
-        self.add_box_button2.clicked.connect(self.clickedAddBoxButton2)
-        self.add_pin_button.clicked.connect(self.clickedAddPinButton)
-
-    def clickedAddBoxButton(self):
+    def clickedBoxButton(self, xml_name):
         window = self.window()
-        box = common.create_node_for_xml('hogera', window.view)
-        window.view.add_node_on_center(box)
-        box.recalculation()
-
-    def clickedAddBoxButton2(self):
-        window = self.window()
-        box = common.create_node_for_xml('test2', window.view)
+        box = common.create_node_for_xml(xml_name, window.view)
         window.view.add_node_on_center(box)
         box.recalculation()
 

@@ -185,9 +185,10 @@ class View(QtWidgets.QGraphicsView):
         if history:
             self.create_history()
 
-    def recalculation(self):
+    def recalculation(self, history=True):
         common.nodes_recalculation(self)
-        self.create_history()
+        if history:
+            self.create_history()
 
     def add_item(self, widget):
         if not isinstance(widget, list):
