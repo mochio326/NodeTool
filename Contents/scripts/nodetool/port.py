@@ -369,8 +369,6 @@ class Port(QtWidgets.QGraphicsObject):
         else:
             line_.source = None
         self.lines.remove(line_)
-        if self.node.TYPE == 'Pin':
-            self.node.return_initial_state()
         self.change_to_basic_color()
         self.update()
 

@@ -225,7 +225,6 @@ class Line(QtWidgets.QGraphicsPathItem):
             n = _none_move_port.node
         else:
             n = item.node
-        # n.forced_recalculation = True
         for tn in n.get_target_nodes():
             tn.forced_recalculation = True
 
