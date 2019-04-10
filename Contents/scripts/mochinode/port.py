@@ -343,7 +343,7 @@ class Port(QtWidgets.QGraphicsObject):
         for _p in self.children_port:
             _p.setVisible(self.children_port_expand)
             _p.setY(_port_y)
-            if self.children_port_expand:
+            if self.children_port_expand and self.check_parent_port_open():
                 _port_y = _port_y + _p.height_space
             _p.update_connect_line_pos()
             _p.deploying_port()
