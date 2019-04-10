@@ -64,6 +64,10 @@ class Node(QtWidgets.QGraphicsObject):
             yield _i
 
     @property
+    def none_hyphen_id(self):
+        return self.id.replace('-', '')
+
+    @property
     def rect(self):
         return QtCore.QRect(0, 0, self.width, self.height)
 
