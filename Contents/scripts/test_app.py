@@ -29,7 +29,7 @@ class Window(QtWidgets.QWidget):
         addBtn = QtWidgets.QPushButton('Add Node')
         addBtn.clicked.connect(self.addNode)
         layoutBtn = QtWidgets.QPushButton('Layout')
-        layoutBtn.clicked.connect(lambda: self.view.autoLayout())
+        layoutBtn.clicked.connect(lambda: self.view.auto_layout())
         vbox.addStrut(100)
         vbox.addWidget(self.nameFld)
         vbox.addWidget(addBtn)

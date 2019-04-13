@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
-import uuid
+from . import node
+from . import line
+import os
+import subprocess
+import re
 
 
 class View(QtWidgets.QGraphicsView):
@@ -170,7 +174,130 @@ class View(QtWidgets.QGraphicsView):
         for _n in self.scene().selectedItems():
             _n.delete()
 
+    def auto_layout(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        dot_exe = os.path.join(current_dir, r'graphviz\dot.exe')
+        import_dot_file = os.path.join(current_dir, 'temp.dot')
+        export_xdot_file = os.path.join(current_dir, 'temp.xdot')
 
+        make_dot(self, import_dot_file)
+
+        cmd = '"{0}" -Txdot -o "{1}" "{2}"'.format(dot_exe, export_xdot_file, import_dot_file)
+        exec_subprocess(cmd)
+
+        xdot_data, max_y = get_node_pos_from_xdot(export_xdot_file)
+
+        os.remove(import_dot_file)
+        os.remove(export_xdot_file)
+
+        for _n in node.Node.scene_nodes_iter(self):
+            _d = xdot_data.get(_n.id)
+            if _d is None:
+                continue
+            _n.setX(_d[0])
+            y = (_d[1] * -1) + max_y
+            _n.setY(y)
+            _n.update()
+            _n.deploying_port()
+
+
+def get_node_pos_from_xdot(xdot_file_path):
+    xdot_data = {}
+    f_all = open(xdot_file_path).read()
+    f_all = re.sub('\r|\n|\t', '', f_all)
+    f_all = re.sub('(^.*?\{|\}$)', '', f_all)
+    sp = f_all.split(';')
+    # 最初の２要素と最後はノード以外なので無視
+    max_y = 0
+    for s in sp[2:-1]:
+        node_name = re.sub(' +\[.+$', '', s)[1:-1]
+        # ->の表記があるものはライン
+        if '->' in node_name:
+            continue
+        x, y = re.sub('^.+pos="|".+$', '', s).split(',')
+        xdot_data[node_name] = [float(x), float(y)]
+        if max_y < float(y):
+            max_y = float(y)
+    return xdot_data, max_y
+
+
+def make_dot(view, file):
+    _data = get_node_data_for_dot(view)
+    _data.extend(get_line_data_for_dot(view))
+    _data.extend(get_temp_line_data_for_dot(view))
+
+    # ranksep:横のノード間隔　nodesep:縦のノード間隔
+    dot_string = 'digraph sample{graph[rankdir = LR,nodesep=1.25,ranksep=1.5];node [shape=record,width=1.5];'
+    dot_string = dot_string + '\r\n'.join(_data) + '}'
+
+    with open(file, mode='w') as f:
+        f.write(dot_string)
+
+
+def get_temp_line_data_for_dot(view):
+    data = []
+    for _l in line.TempLine.scene_lines_iter(view):
+        source_port = _l.source
+        target_port = _l.target
+        line_string = '"{0}":{1} -> "{2}":{3}'.format(source_port.node.id, source_port.name,
+                                                      target_port.node.id, target_port.name)
+        data.append(line_string)
+    return data
+
+
+def get_line_data_for_dot(view):
+    data = []
+    for _l in line.Line.scene_lines_iter(view):
+        if not _l.isVisible():
+            continue
+        # ポートが閉じているときは一番上のポートから接続されていることにする
+        source_port = _l.source
+        if not source_port.isVisible():
+            source_port = source_port.get_visible_parent_port()
+
+        target_port = _l.target
+        if not target_port.isVisible():
+            target_port = target_port.get_visible_parent_port()
+
+        line_string = '"{0}":{1} -> "{2}":{3}'.format(source_port.node.id, source_port.name,
+                                                      target_port.node.id, target_port.name)
+        data.append(line_string)
+    return data
+
+
+def get_node_data_for_dot(view):
+    data = []
+    for _n in node.Node.scene_nodes_iter(view):
+        port_names = []
+        for _p in _n.ports:
+            port_names.append('<{0}>{0}'.format(_p.name))
+            if not _p.children_port_expand:
+                continue
+            for _pp in _p.children_ports_all_iter():
+                if not _pp.check_parent_port_open():
+                    continue
+                port_names.append('<{0}>{0}'.format(_pp.name))
+        node_string = '"{0}" [label = "{1}",height={2}];'.format(_n.id, '|'.join(port_names),
+                                                                 len(port_names) * 0.5 + 0.5)
+        data.append(node_string)
+    return data
+
+
+def exec_subprocess(cmd):
+    startupinfo = None
+    if os.name == "nt":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    devnull = open(os.devnull, "wb")
+    p = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=devnull,
+        startupinfo=startupinfo)
+    devnull.close()
+    stdout, stderr = p.communicate()
+    p.wait()
 
 # -----------------------------------------------------------------------------
 # EOF

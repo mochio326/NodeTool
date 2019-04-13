@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from .vendor.Qt import QtCore, QtGui, QtWidgets
 import cmath
-import copy
 
 class LineArrow(QtWidgets.QGraphicsItem):
     def __init__(self, parent, color):
@@ -316,6 +315,11 @@ class TempLine(Line):
     def mousePressEvent(self, event):
         pass
 
+    def mouseMoveEvent(self, event):
+        pass
+
+    def mouseReleaseEvent(self, event):
+        pass
 # -----------------------------------------------------------------------------
 # EOF
 # -----------------------------------------------------------------------------

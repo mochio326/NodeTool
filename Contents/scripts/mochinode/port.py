@@ -395,7 +395,6 @@ class Port(QtWidgets.QGraphicsObject):
         self.lines = list(set(self.lines))
         self.update()
 
-
     def connect_temp_line(self, line_):
         if self.type == 'in':
             line_.target = self
