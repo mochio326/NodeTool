@@ -95,8 +95,6 @@ class Line(QtWidgets.QGraphicsPathItem):
         return '{}.{} -> {}.{}'.format(self.source.node.name, self.source.name, self.target.node.name, self.target.name)
 
     def __init__(self, point_a, point_b, color):
-        from .port import Port
-        self.port = Port
         super(Line, self).__init__()
         self.color = color
         self._point_a = point_a
@@ -136,7 +134,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         else:
             self.point_b = pos
 
-    def delete(self, create_history=True):
+    def delete(self):
         if self.source is not None:
             port = self.source
             self.source.change_to_basic_color()
@@ -148,8 +146,10 @@ class Line(QtWidgets.QGraphicsPathItem):
 
         self.scene().views()[0].remove_item(self)
 
-        if self.port_connected and create_history:
+        # 既に接続済みだった場合のみsignal発火
+        if self.port_connected:
             port.node.port_connect_changed.emit()
+            port.node.port_disconnect.emit()
 
     def mousePressEvent(self, event):
         #  どちらかのポートが非表示なとき編集できると混乱するので不可
@@ -163,6 +163,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         vector_a_abs = abs(complex(pos_to_a.x(), pos_to_a.y()))
         vector_b_abs = abs(complex(pos_to_b.x(), pos_to_b.y()))
 
+        # どちら側に近いかで切り離すポートを区別
         if vector_a_abs < vector_b_abs:
             self.point_a = event.pos()
             self.source.disconnect_line(self)
@@ -185,7 +186,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         pos = event.scenePos().toPoint()
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
-        if isinstance(item, self.port):
+        if isinstance(item, none_move_port.__class__):
             if none_move_port.can_connection(item):
                 self.hover_port = item
                 self.hover_port.change_to_hover_color()
@@ -196,6 +197,7 @@ class Line(QtWidgets.QGraphicsPathItem):
                 self.hover_port = None
 
         self.setZValue(100)
+        self.scene().update()
 
     def mouseReleaseEvent(self, event):
         if not self._can_edit():
@@ -206,7 +208,8 @@ class Line(QtWidgets.QGraphicsPathItem):
         item = self.scene().itemAt(pos.x(), pos.y(), QtGui.QTransform())
 
         # ポート以外で離したらラインごと削除
-        if not isinstance(item, self.port):
+        none_move_port = self._get_none_move_port()
+        if not isinstance(item, none_move_port.__class__):
             self.delete()
             return False
 
@@ -220,6 +223,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         _none_move_port.connect_line(self)
 
         item.node.port_connect_changed.emit()
+        item.node.port_connect.emit()
         self.port_connected = True
         return True
 

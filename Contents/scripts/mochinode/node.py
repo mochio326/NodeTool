@@ -48,12 +48,14 @@ class NodeLabel(QtWidgets.QGraphicsItem):
 
 
 class Node(QtWidgets.QGraphicsObject):
-    TYPE = 'Node'
     DEF_Z_VALUE = 0.1
 
+    moved = QtCore.Signal()
     port_expanded = QtCore.Signal()
-    pos_changed = QtCore.Signal()
     port_connect_changed = QtCore.Signal()
+    port_connect = QtCore.Signal()
+    port_disconnect = QtCore.Signal()
+
 
     @classmethod
     def scene_nodes_iter(cls, scene):
@@ -70,25 +72,6 @@ class Node(QtWidgets.QGraphicsObject):
     @property
     def rect(self):
         return QtCore.QRect(0, 0, self.width, self.height)
-
-    @property
-    def save_data(self):
-        data = {}
-        data['id'] = self.id
-        data['name'] = self.name
-        data['z_value'] = self.zValue()
-        data['x'] = self.x()
-        data['y'] = self.y()
-        data['ports'] = {}
-        for _p in self.ports:
-            data['ports'][_p.name] = {}
-            data['ports'][_p.name]['expand'] = _p.children_port_expand
-            data['ports'][_p.name]['value'] = _p.value
-            for _pp in _p.children_ports_all_iter():
-                data['ports'][_pp.name] = {}
-                data['ports'][_pp.name]['expand'] = _pp.children_port_expand
-                data['ports'][_pp.name]['value'] = _pp.value
-        return data
 
     @property
     def ports(self):
@@ -201,7 +184,7 @@ class Node(QtWidgets.QGraphicsObject):
             self.drag = True
             # 自身と関連するラインを見やすくするために最前面表示
             self.setZValue(100.0)
-            for _p in self.ports:
+            for _p in self.children_ports_all_iter():
                 for _l in _p.lines:
                     _l.setZValue(100.0)
         super(Node, self).mousePressEvent(event)
@@ -212,7 +195,7 @@ class Node(QtWidgets.QGraphicsObject):
         if self.drag:
             # 自身以外も選択されている場合にまとめて処理する
             for _n in self.scene().selectedItems():
-                for _p in _n.ports:
+                for _p in _n.children_ports_all_iter():
                     _p.update_connect_line_pos()
             self.scene().update()
 
@@ -228,11 +211,11 @@ class Node(QtWidgets.QGraphicsObject):
             for _i, _n in enumerate(node_z_list):
                 _n[1].setZValue(self.DEF_Z_VALUE + 0.01 * _i)
             # ラインは最後面に戻しとく
-            for _p in self.ports:
+            for _p in self.children_ports_all_iter():
                 for _l in _p.lines:
                     _l.setZValue(_l.DEF_Z_VALUE)
             super(Node, self).mouseReleaseEvent(event)
-            self.pos_changed.emit()
+            self.moved.emit()
 
     def delete(self):
         for _p in self.children_ports_all_iter():

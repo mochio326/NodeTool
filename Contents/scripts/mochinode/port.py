@@ -233,12 +233,14 @@ class Port(QtWidgets.QGraphicsObject):
     def hoverMoveEvent(self, event):
         if self.isUnderMouse():
             self.change_to_hover_color()
+            self.node.update()
 
     def hoverEnterEvent(self, event):
         pass
 
     def hoverLeaveEvent(self, event):
         self.change_to_basic_color()
+        self.node.update()
 
     def mousePressEvent(self, event):
         self.hover_port = None
@@ -383,7 +385,7 @@ class Port(QtWidgets.QGraphicsObject):
         if self.type == 'in':
             if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
-                _l.delete(create_history=False)
+                _l.delete()
                 self.lines = []
             line_.target = self
             line_.point_b = self.get_center()
@@ -410,14 +412,8 @@ class Port(QtWidgets.QGraphicsObject):
         return self.mapToScene(center)
 
     def can_connection(self, port):
-        if self.value_type != port.value_type:
-            # Noneな場合はPinなので例外
-            if self.value_type is not None and port.value_type is not None:
-                return False
         if self.type == port.type:
             return False
-        # サイクル確認
-        # memo:ラインをたどって全体的にサイクルしてないかを調べる予定
         if self.node == port.node:
             return False
         return True
