@@ -190,16 +190,21 @@ class View(QtWidgets.QGraphicsView):
         os.remove(import_dot_file)
         os.remove(export_xdot_file)
 
+        _pos = self.mapToScene(0, 0)
+
         animation_group = QtCore.QParallelAnimationGroup(self)
         for _n in node.Node.scene_nodes_iter(self):
             _d = xdot_data.get(_n.id)
             if _d is None:
                 continue
+            x = _d[0] + _pos.x()
+            # yの値がなぜか反転してxdotに書き出される感じだったので自分で原点基準で反転させている
             y = (_d[1] * -1) + max_y
+            y = y + _pos.y()
             animation = QtCore.QPropertyAnimation(_n, "pos", self)
             animation.setDuration(100)
             # animation.setEasingCurve(QtCore.QEasingCurve.InOutQuint)
-            animation.setEndValue(QtCore.QPointF(_d[0], y))
+            animation.setEndValue(QtCore.QPointF(x, y))
             animation_group.addAnimation(animation)
 
         for _l in line.TempLine.scene_lines_iter(self):
@@ -216,7 +221,7 @@ class View(QtWidgets.QGraphicsView):
             for _l in line.Line.scene_lines_iter(self):
                 _l.update_path()
 
-        animation.finished.connect(_finish)
+        animation_group.finished.connect(_finish)
 
 
 
