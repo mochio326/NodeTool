@@ -66,10 +66,6 @@ class Node(QtWidgets.QGraphicsObject):
             yield _i
 
     @property
-    def none_hyphen_id(self):
-        return self.id.replace('-', '')
-
-    @property
     def rect(self):
         return QtCore.QRect(0, 0, self.width, self.height)
 
@@ -114,11 +110,15 @@ class Node(QtWidgets.QGraphicsObject):
         self.forced_recalculation = False
         self.recalculation_weight = 0
 
+
         if label is not None:
             self.label = NodeLabel(self, label)
             self.port_init_y = 30
         else:
             self.port_init_y = 10
+
+        self.moved.connect(self.update_connect_all_line_pos)
+
 
     def refresh_id(self):
         self.id = str(uuid.uuid4())
@@ -194,10 +194,16 @@ class Node(QtWidgets.QGraphicsObject):
 
         if self.drag:
             # 自身以外も選択されている場合にまとめて処理する
-            for _n in self.scene().selectedItems():
-                for _p in _n.children_ports_all_iter():
-                    _p.update_connect_line_pos()
+            # for _n in self.scene().selectedItems():
+            #     for _p in _n.children_ports_all_iter():
+            #         _p.update_connect_line_pos()
+            self.moved.emit()
             self.scene().update()
+
+    def update_connect_all_line_pos(self):
+        for _n in self.scene().selectedItems():
+            for _p in _n.children_ports_all_iter():
+                _p.update_connect_line_pos()
 
     def mouseReleaseEvent(self, event):
         if self.drag:

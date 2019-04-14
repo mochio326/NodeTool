@@ -11,6 +11,7 @@ class LineArrow(QtWidgets.QGraphicsItem):
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(0)
+        self.pen.setColor(self.color)
 
     @property
     def line(self):
@@ -18,7 +19,6 @@ class LineArrow(QtWidgets.QGraphicsItem):
 
     def paint(self, painter, option, widget):
         self.color = self.parentItem().color
-        self.pen.setColor(self.color)
         painter.setPen(self.pen)
         path = QtGui.QPainterPath()
         dx = self.line.point_b.x() - self.line.point_a.x()
@@ -78,17 +78,6 @@ class Line(QtWidgets.QGraphicsPathItem):
             yield _i
 
     @property
-    def save_data(self):
-        data = {}
-        data['source'] = {}
-        data['source']['node_id'] = self.source.node.id
-        data['source']['port_name'] = self.source.name
-        data['target'] = {}
-        data['target']['node_id'] = self.target.node.id
-        data['target']['port_name'] = self.target.name
-        return data
-
-    @property
     def _tooltip(self):
         if self.source is None or self.target is None:
             return ''
@@ -104,6 +93,7 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.pen = QtGui.QPen()
         self.pen.setStyle(QtCore.Qt.SolidLine)
         self.pen.setWidth(1)
+        self.pen.setColor(self.color)
         self.hover_port = None
         self.arrow = LineArrow(self, self.color)
 
@@ -228,12 +218,14 @@ class Line(QtWidgets.QGraphicsPathItem):
         return True
 
     def update_path(self):
-        if self.target is not None and self.target is not None:
+        if self.source is not None and self.target is not None:
             if not self.target.isVisible() and not self.source.isVisible():
                 self.setVisible(False)
                 return
             else:
                 self.setVisible(True)
+                self._point_a = self.source.get_center()
+                self._point_b = self.target.get_center()
 
         path = QtGui.QPainterPath()
         path.moveTo(self.point_a)
@@ -263,7 +255,6 @@ class Line(QtWidgets.QGraphicsPathItem):
         self.source.change_to_basic_color()
 
     def paint(self, painter, option, widget):
-        self.pen.setColor(self.color)
         painter.setPen(self.pen)
         painter.drawPath(self.path())
         self.arrow.paint(painter, option, widget)

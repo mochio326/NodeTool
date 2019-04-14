@@ -190,15 +190,34 @@ class View(QtWidgets.QGraphicsView):
         os.remove(import_dot_file)
         os.remove(export_xdot_file)
 
+        animation_group = QtCore.QParallelAnimationGroup(self)
         for _n in node.Node.scene_nodes_iter(self):
             _d = xdot_data.get(_n.id)
             if _d is None:
                 continue
-            _n.setX(_d[0])
             y = (_d[1] * -1) + max_y
-            _n.setY(y)
-            _n.update()
-            _n.deploying_port()
+            animation = QtCore.QPropertyAnimation(_n, "pos", self)
+            animation.setDuration(100)
+            # animation.setEasingCurve(QtCore.QEasingCurve.InOutQuint)
+            animation.setEndValue(QtCore.QPointF(_d[0], y))
+            animation_group.addAnimation(animation)
+
+        for _l in line.TempLine.scene_lines_iter(self):
+            _l.setVisible(False)
+        for _l in line.Line.scene_lines_iter(self):
+            _l.setVisible(False)
+
+        animation_group.start()
+
+        def _finish():
+            # ラインの再描画と表示
+            for _l in line.TempLine.scene_lines_iter(self):
+                _l.update_path()
+            for _l in line.Line.scene_lines_iter(self):
+                _l.update_path()
+
+        animation.finished.connect(_finish)
+
 
 
 def get_node_pos_from_xdot(xdot_file_path):

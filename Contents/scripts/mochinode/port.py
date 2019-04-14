@@ -385,16 +385,17 @@ class Port(QtWidgets.QGraphicsObject):
         if self.type == 'in':
             if len(self.lines) > 0 and not not_del:
                 _l = self.lines[0]
-                _l.delete()
+                # 別のラインが接続済みだったら削除しておく
+                if line_ != _l:
+                    _l.delete()
                 self.lines = []
             line_.target = self
-            line_.point_b = self.get_center()
         else:
             line_.source = self
-            line_.point_a = self.get_center()
         if not not_del:
             self.lines.append(line_)
         self.lines = list(set(self.lines))
+        line_.update_path()
         self.update()
 
     def connect_temp_line(self, line_):
@@ -419,14 +420,10 @@ class Port(QtWidgets.QGraphicsObject):
         return True
 
     def update_connect_line_pos(self):
-        if self.type == 'in':
-            _p = 'point_b'
-        else:
-            _p = 'point_a'
         for _l in self.lines:
-            setattr(_l, _p, self.get_center())
+            _l.update_path()
         for _l in self.temp_lines:
-            setattr(_l, _p, self.get_center())
+            _l.update_path()
         for cp in self.children_port:
             cp.update_connect_line_pos()
 
