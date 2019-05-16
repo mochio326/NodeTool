@@ -22,7 +22,6 @@ class View(QtWidgets.QGraphicsView):
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.SmartViewportUpdate)
         self.drag = False
-        self._clipboard = None
         self.add_items = []
         self._operation_history = [None]
         self._current_operation_history = 0
@@ -109,8 +108,31 @@ class View(QtWidgets.QGraphicsView):
             self.drag = False
             self.setCursor(QtCore.Qt.ArrowCursor)
         super(View, self).mouseReleaseEvent(event)
+        return False
 
     def keyPressEvent(self, event):
+        if event.isAutoRepeat():
+            event.ignore()
+            return
+
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ControlModifier:
+            # この辺りの処理は各関数をオーバーライドアプリ側での独自実装
+            if event.key() == QtCore.Qt.Key_C:
+                self._copy()
+                return
+            if event.key() == QtCore.Qt.Key_V:
+                self._paste()
+                return
+            if event.key() == QtCore.Qt.Key_X:
+                self._cut()
+                return
+            if event.key() == QtCore.Qt.Key_Z:
+                self._undo()
+                return
+            if event.key() == QtCore.Qt.Key_Y:
+                self._redo()
+                return
 
         if event.key() == QtCore.Qt.Key_F:
             self.selected_item_focus()
@@ -122,6 +144,11 @@ class View(QtWidgets.QGraphicsView):
 
         if event.key() == QtCore.Qt.Key_Delete:
             self._delete()
+            return
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat():
+            event.ignore()
             return
 
     def selected_item_focus(self):
@@ -207,22 +234,37 @@ class View(QtWidgets.QGraphicsView):
             animation.setEndValue(QtCore.QPointF(x, y))
             animation_group.addAnimation(animation)
 
+        self._animation_preprocess()
+        animation_group.start()
+        animation_group.finished.connect(self._animation_postprocess)
+
+    def _animation_preprocess(self):
         for _l in line.TempLine.scene_lines_iter(self):
             _l.setVisible(False)
         for _l in line.Line.scene_lines_iter(self):
             _l.setVisible(False)
 
-        animation_group.start()
+    def _animation_postprocess(self):
+        # ラインの再描画と表示
+        for _l in line.TempLine.scene_lines_iter(self):
+            _l.update_path()
+        for _l in line.Line.scene_lines_iter(self):
+            _l.update_path()
 
-        def _finish():
-            # ラインの再描画と表示
-            for _l in line.TempLine.scene_lines_iter(self):
-                _l.update_path()
-            for _l in line.Line.scene_lines_iter(self):
-                _l.update_path()
+    def _copy(self):
+        pass
 
-        animation_group.finished.connect(_finish)
+    def _paste(self):
+        pass
 
+    def _cut(self):
+        pass
+
+    def _undo(self):
+        pass
+
+    def _redo(self):
+        pass
 
 
 def get_node_pos_from_xdot(xdot_file_path):
@@ -245,16 +287,22 @@ def get_node_pos_from_xdot(xdot_file_path):
     return xdot_data, max_y
 
 
-def make_dot(view, file):
-    _data = get_node_data_for_dot(view)
-    _data.extend(get_line_data_for_dot(view))
-    _data.extend(get_temp_line_data_for_dot(view))
+def make_dot(view, file_path, mode='all'):
+    if mode == 'all':
+        iter = node.Node.scene_nodes_iter(view)
+    else:
+        iter = view.scene().selectedItems()
+    _data = get_node_data_for_dot(view, iter)
+
+    if mode == 'all':
+        _data.extend(get_line_data_for_dot(view))
+        _data.extend(get_temp_line_data_for_dot(view))
 
     # ranksep:横のノード間隔　nodesep:縦のノード間隔
     dot_string = 'digraph sample{graph[rankdir = LR,nodesep=1.25,ranksep=1.5];node [shape=record,width=1.5];'
     dot_string = dot_string + '\r\n'.join(_data) + '}'
 
-    with open(file, mode='w') as f:
+    with open(file_path, mode='w') as f:
         f.write(dot_string)
 
 
@@ -289,9 +337,9 @@ def get_line_data_for_dot(view):
     return data
 
 
-def get_node_data_for_dot(view):
+def get_node_data_for_dot(view, iter):
     data = []
-    for _n in node.Node.scene_nodes_iter(view):
+    for _n in iter:
         port_names = []
         for _p in _n.ports:
             port_names.append('<{0}>{0}'.format(_p.name))
