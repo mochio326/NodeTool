@@ -98,6 +98,7 @@ class PortLabel(QtWidgets.QGraphicsItem):
         super(PortLabel, self).__init__(parent)
         self.label = label
         self.text_size = 10
+        self.port_value_visible = True
 
         # Pen.
         self.pen = QtGui.QPen()
@@ -108,11 +109,19 @@ class PortLabel(QtWidgets.QGraphicsItem):
     def paint(self, painter, option, widget):
         painter.setPen(self.pen)
         painter.setFont(self.font)
-        painter.drawText(self.boundingRect(), self.text_align, self.label)
+        _labal = self._get_label()
+        painter.drawText(self.boundingRect(), self.text_align, _labal)
+
+    def _get_label(self):
+        l = self.label
+        if self.port_value_visible:
+            l = l + '[' + str(self.port.value) + ']'
+        return l
 
     def boundingRect(self):
         font_metrics = QtGui.QFontMetrics(self.font)
-        width = font_metrics.width(self.label)
+        _labal = self._get_label()
+        width = font_metrics.width(_labal)
         height = font_metrics.height()
         # ベースラインから下降サイズを無視する
         # こういう場合、height()ではなく、ascent()を使ってもOK!
@@ -416,6 +425,8 @@ class Port(QtWidgets.QGraphicsObject):
         if self.type == port.type:
             return False
         if self.node == port.node:
+            return False
+        if self.value_type != port.value_type:
             return False
         return True
 
